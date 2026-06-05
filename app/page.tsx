@@ -65,13 +65,11 @@ export default function Home() {
   // Keep widget list in sync with PRD keywords (live preview)
   useEffect(() => {
     const detected = parsePrdForPreview(prdText).widgets;
-    setPreviewWidgets((prev) => {
-      const safePrev = asWidgetArray(prev);
-      const kept = safePrev.filter((w) => detected.includes(w));
-      const added = detected.filter((w) => !kept.includes(w));
-      const next = [...kept, ...added];
-      return next.length > 0 ? next : detected;
-    });
+    const safePrev = asWidgetArray(useMemory.getState().previewWidgets);
+    const kept = safePrev.filter((w) => detected.includes(w));
+    const added = detected.filter((w) => !kept.includes(w));
+    const next = [...kept, ...added];
+    setPreviewWidgets(next.length > 0 ? next : detected);
   }, [prdText, setPreviewWidgets]);
 
   async function runPipeline() {

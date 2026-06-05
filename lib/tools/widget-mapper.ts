@@ -70,7 +70,14 @@ export function normalizeWidgetList(widgets: string[]): string[] {
 /** Coerce API/store values into a widget name array */
 export function asWidgetArray(value: unknown, fallback: string[] = []): string[] {
   if (Array.isArray(value)) {
-    return normalizeWidgetList(value.map((w) => String(w)));
+    return normalizeWidgetList(
+      value.map((w) => {
+        if (typeof w === 'object' && w !== null && 'name' in w) {
+          return String(w.name);
+        }
+        return String(w);
+      })
+    );
   }
   return fallback;
 }

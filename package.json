@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
+    "@stackblitz/sdk": "^1.11.0",
     "groq-sdk": "^1.2.0",
     "idb": "^8.0.3",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-live": "^4.1.8",
     "zustand": "^5.0.13"
   },
   "devDependencies": {

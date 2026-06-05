@@ -12,10 +12,11 @@ Built with Next.js, Groq (Llama 3.3), and a two-agent pipeline with prompt engin
 |---------|-------------|
 | **Spec input** | Paste a maritime PRD or load preset samples |
 | **Agent 1 — PRD Parser** | Parses spec → JSON schema (widgets, layout, priority) |
-| **Agent 2 — UI Builder** | Generates one `.tsx` component per widget |
+| **Agent 2 — UI Builder** | Generates one `.tsx` component per widget via Native Tool Calling |
 | **Widget hierarchy** | Visual tree of proposed dashboard structure |
 | **Prompt engineering** | Inspect system/user prompts sent to the LLM |
 | **Live preview** | Dynamic preview from PRD (vessel, widgets, data) |
+| **StackBlitz IDE Export** | Instantly launch generated UI in a full browser-based Vite + Tailwind IDE |
 | **Dashboard Studio** | Drag-and-drop reorder, hide/show widgets |
 | **Code export** | Copy or download TSX (single file, all files, bundle + index) |
 | **Long-term memory** | Saves runs to IndexedDB (PRD, schema, widgets) |
@@ -77,10 +78,11 @@ flowchart TB
    - **LLM:** Groq `llama-3.3-70b-versatile` with engineered prompts (`lib/prompts/maritime-prompts.ts`).
    - **Output:** `ParsedSchema` — `domain`, `widgets[]`, `layout`, `priority`.
 5. **Agent 2** runs (per widget in schema):
-   - **Tool:** `checkExists` / `registerComponent` (`lib/tools/registry.ts`).
-   - **LLM:** One Groq call per widget → React + TypeScript + Tailwind TSX.
+   - **Tool Call:** LLM autonomously invokes `get_design_system_template` to fetch strict JSON constraints and Tailwind standards for the specific widget archetype (`lib/tools/widget-design-system.ts`).
+   - **LLM Generation:** Groq generates isolated React functional components strictly containing hardcoded mockup data.
    - **Output:** `Record<widgetName, sourceCode>`.
 6. **UI updates** — Center tabs: **Widget Hierarchy**, **Prompt Engineering**, **Studio**, **Live Preview**. Right panel: component list + code viewer + export bar. History saved to IndexedDB.
+   - Note: The Live Preview dynamically evaluates exact LLM-generated function names via RegEx to ensure stability and wraps execution in a custom `SafeErrorBoundary`.
 7. **Studio** — Reorder or hide widgets; preview reflects changes immediately.
 8. **Export** — Copy code or download `.tsx` files for use in your app.
 
@@ -111,9 +113,11 @@ flowchart TB
 | Item | Location |
 |------|----------|
 | Implementation | `lib/agents/agent2-builder.ts` |
-| Prompts | Per-widget user prompt with domain/layout/priority hints |
+| Native Tools | `get_design_system_template` (`lib/tools/widget-design-system.ts`) |
+| Prompts | Per-widget user prompt enforcing self-contained hardcoded data without props |
 | Model | Groq `llama-3.3-70b-versatile`, temperature `0.7` |
 | Output | Map of component name → TSX source |
+| Resilience | Features a custom `withRetry` exponential backoff wrapper to seamlessly absorb HTTP `429` Rate Limits without crashing the pipeline. |
 
 ### Prompt engineering tab
 
@@ -159,12 +163,14 @@ lib/
     maritime-prompts.ts    # Centralized prompt engineering
   tools/
     widget-mapper.ts       # Keyword detection + normalization
+    widget-design-system.ts# Structured UI templates for Native LLM Tools
     registry.ts            # In-memory component registry (per run)
   preview/
     parse-prd.ts           # PRD → live preview data
     preview-context.tsx    # React context for preview widgets
-    widget-previews.tsx    # Preview card components
+    widget-previews.tsx    # Preview cards w/ dynamic regex & SafeErrorBoundary
     hierarchy.ts           # Widget tree builder
+    stackblitz-builder.ts  # Vite/React/Tailwind VFS Generator for StackBlitz SDK
   export/
     code-export.ts         # Download / copy utilities
   memory/
@@ -277,9 +283,10 @@ Implementation: `lib/export/code-export.ts`, `components/code-export-bar.tsx`
 | Issue | Fix |
 |-------|-----|
 | Pipeline fails immediately | Check `GROQ_API_KEY` in `.env.local` and restart dev server |
+| Pipeline pauses for several seconds | Working as intended. The `withRetry` wrapper is intelligently backoff-retrying after hitting Groq's Tokens-Per-Minute rate limits. |
 | `previewWidgets.filter is not a function` | Refresh page; widgets are normalized via `asWidgetArray()` |
 | Git push denied (wrong GitHub user) | Use SSH remote: `git@github.com-thinkpalm:USER/REPO.git` — see SSH setup below |
-| Live preview looks static | Edit PRD or load a sample; preview parses spec client-side before pipeline runs |
+| Live preview shows red "Runtime Error" box | The LLM generated code that crashed. Try hitting "Generate UI" again for a fresh, error-free TSX string. |
 
 ### Git SSH (dual GitHub accounts)
 

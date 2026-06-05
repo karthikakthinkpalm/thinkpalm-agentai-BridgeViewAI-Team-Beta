@@ -57,12 +57,11 @@ const WIDGET_META: Record<string, { label: string; description: string }> = {
 
 export function buildWidgetHierarchy(schema: ParsedSchema): HierarchyNode {
   const widgetNodes: HierarchyNode[] = schema.widgets.map((w) => {
-    const meta = WIDGET_META[w] ?? { label: w, description: 'Generated dashboard widget' };
     return {
-      id: w,
-      label: meta.label,
+      id: w.name,
+      label: w.name.replace(/([A-Z])/g, ' $1').trim(),
       type: 'widget' as const,
-      description: meta.description,
+      description: w.description,
     };
   });
 

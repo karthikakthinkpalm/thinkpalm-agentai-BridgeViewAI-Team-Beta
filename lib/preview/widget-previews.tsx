@@ -1,7 +1,10 @@
 'use client';
 
 import type { ComponentType, ReactNode } from 'react';
+import React from 'react';
+import { LiveProvider, LiveError, LivePreview } from 'react-live';
 import { PreviewProvider, usePreviewData } from './preview-context';
+import { useMemory } from '@/lib/memory/session';
 
 function CardShell({
   title,
@@ -21,6 +24,32 @@ function CardShell({
       <div className="flex-1">{children}</div>
     </div>
   );
+}
+
+class SafeErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: '' };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error.message };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Widget render error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-full p-4 rounded bg-rose-950/20 border border-rose-500/30">
+          <p className="text-sm text-rose-400 font-mono">Runtime Error: {this.state.errorMsg}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function VoyageProgressTrackerPreview() {
@@ -241,14 +270,48 @@ const PREVIEW_MAP: Record<string, ComponentType> = {
   KPIDashboard: KPIDashboardPreview,
 };
 
+export function DynamicWidgetPreview({ widgetName, code }: { widgetName: string, code: string }) {
+  // react-live doesn't support ES module syntax (import/export) out of the box
+  // We strip imports/exports and manually trigger render
+  let transformedCode = code.replace(/import\s+[\s\S]*?(?:from\s+['"].*?['"]|['"].*?['"]);?/g, '');
+  transformedCode = transformedCode.replace(/export\s+default\s+/g, '');
+  transformedCode = transformedCode.replace(/export\s+/g, '');
+  
+  const match = transformedCode.match(/function\s+([A-Z][a-zA-Z0-9_]*)/);
+  const actualName = match ? match[1] : widgetName;
+  transformedCode += `\nrender(<${actualName} />);`;
+
+  return (
+    <CardShell title={widgetName} subtitle="Live Generated Code">
+      <LiveProvider code={transformedCode} scope={{ React, ...React, exports: {}, module: { exports: {} } }} noInline={true} language="tsx">
+        <div className="rounded-xl border border-slate-700/50 bg-slate-900 p-4">
+          <SafeErrorBoundary>
+            <LivePreview />
+          </SafeErrorBoundary>
+        </div>
+        <LiveError className="mt-2 rounded bg-red-950/50 p-2 text-xs text-red-400" />
+      </LiveProvider>
+    </CardShell>
+  );
+}
+
 export function WidgetPreview({ widgetName }: { widgetName: string }) {
+  const { components } = useMemory();
+  const code = components[widgetName];
+  
+  if (code) {
+    return <DynamicWidgetPreview widgetName={widgetName} code={code} />;
+  }
+
   const Preview = PREVIEW_MAP[widgetName] ?? (() => <GenericWidgetPreview name={widgetName} />);
   return <Preview />;
 }
 
 function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
+  const d = usePreviewData();
+  const { components } = useMemory();
+
   if (widgets.length === 0) {
-    const d = usePreviewData();
     return (
       <div className="flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-700/80 bg-slate-950/40 p-8 text-center">
         <p className="text-sm text-slate-400">Add widgets to your spec to see a live preview</p>
@@ -257,11 +320,27 @@ function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
     );
   }
 
+  const handleOpenStackBlitz = async () => {
+    const { openStackBlitz } = await import('./stackblitz-builder');
+    openStackBlitz(components, widgets);
+  };
+
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-xs text-slate-500">
-        Live preview from your spec — updates as you edit the PRD
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">
+          Live preview from your spec — updates as you edit the PRD
+        </p>
+        <button
+          onClick={handleOpenStackBlitz}
+          className="rounded-lg bg-[rgb(var(--accent))] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[rgb(var(--accent-2))] flex items-center gap-2 shadow-lg shadow-black/20"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Open in StackBlitz
+        </button>
+      </div>
       {widgets.map((w) => (
         <div key={w} className="animate-fade-in w-full">
           <WidgetPreview widgetName={w} />
