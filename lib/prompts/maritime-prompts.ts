@@ -30,8 +30,8 @@ const WIDGET_EXEMPLAR = `{
       "description": "Show route progress bar, ETA, distance remaining, current leg, and AIS-style position."
     },
     {
-      "name": "FuelGaugeCards",
-      "description": "Show HFO/MDO tank gauges as cards with fill %, consumption rate, and days remaining."
+      "name": "FuelGaugePanels",
+      "description": "Show HFO/MDO tank gauges as UI panels with fill %, consumption rate, and days remaining."
     }
   ],
   "layout": "dashboard-grid",
@@ -47,8 +47,8 @@ OUTPUT RULES (strict):
 - Return ONLY valid JSON. No markdown fences. No explanation.
 - Use exactly this shape:
 ${WIDGET_EXEMPLAR}
-- INVENT appropriate React component names (PascalCase) for "name".
-- Write a clear "description" of what the component should render based on the PRD.
+- INVENT appropriate React component names (PascalCase) for "name". DO NOT use the word "Card" in the name (e.g. use Panel instead).
+- Write a clear "description" of what the component should render based on the PRD. DO NOT use the word "card" in the description.
 - "layout" is one of: dashboard-grid | bridge-split | alert-first
 - "priority" is one of: safety-critical | operational | informational`;
 }
@@ -66,32 +66,19 @@ Confirm or refine this list in your JSON response.`;
 export function buildAgent2SystemPrompt(): string {
   return `You are a senior React engineer and UI designer specializing in sleek, modern maritime bridge dashboards.
 
-TASK: Generate ONE production-ready React functional component.
-
-REQUIREMENTS:
-- TypeScript + Tailwind CSS only (utility classes).
-- CRITICAL: You have access to a tool named \`get_design_system_template\`. Call it with a widget archetype (e.g. 'table', 'kpi', 'alert', 'list', 'card') to get the exact Tailwind structural JSON for the widget internals.
-- You MUST wrap the entire component in this exact CardShell markup for visual consistency:
-  <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-[rgb(var(--border)/0.14)] bg-[rgb(var(--surface)/0.55)] p-5 shadow-lg shadow-black/30">
-    <div className="mb-4 border-b border-white/5 pb-3">
-      <h3 className="text-base font-semibold text-[rgb(var(--accent)/0.95)]">Widget Title</h3>
-      <p className="mt-0.5 text-sm text-slate-400">Optional Subtitle / Vessel Name</p>
-    </div>
-    <div className="flex-1">
-      {/* Apply the structure retrieved from get_design_system_template here */}
-    </div>
-  </div>
-- Use beautiful modern UI techniques: glassmorphism (bg-opacity/backdrop-blur), rounded-lg containers, subtle borders (border-white/5), and gradients.
-- Typography: Use font-semibold for values, text-sm text-slate-400 for labels.
-- Tables: Use border-collapse, subtle borders between rows, text-left, text-sm.
-- CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data (vessel name, coordinates, percentages, crew names) directly inside the component using variables or state. Do not use \`({ data })\` or expect data from a parent.
+- Typography: Use font-semibold for values (text-lg or text-xl), text-sm text-slate-400 for labels. Always left-align labels unless inside a tight grid.
+- Icons: You MUST use ONLY these exact Lucide icon names: \`Activity\`, \`AlertCircle\`, \`CheckCircle\`, \`Compass\`, \`Navigation\`, \`Ship\`, \`Thermometer\`, \`Battery\`, \`Zap\`, \`FileText\`, \`Award\`, \`Shield\`, \`Clock\`, \`Map\`. DO NOT guess other names like ExclamationCircle.
+- CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data directly inside the component using variables or state.
+- CRITICAL: You MUST write explicit imports for everything you use. (e.g., \`import { RadialBarChart, RadialBar } from 'recharts';\` and \`import { Activity, AlertCircle } from 'lucide-react';\`). Do NOT assume global scope.
 - Accessible: semantic HTML, aria-labels on interactive elements.
-- Export as default export named function matching the widget.
-- Self-contained: only import React from 'react'.
-
 FORBIDDEN:
+- EXTREMELY CRITICAL: You are NOT ALLOWED to use any custom React UI components (like Material UI or Chakra). This means NO capitalized tags like \`<Flex>\`, \`<Grid>\`, \`<Table>\`, \`<Thead>\`, \`<Tbody>\`, \`<Tr>\`, \`<Td>\`, \`<Input>\`, \`<Button>\`, \`<Badge>\`, \`<Card>\`, \`<CardHeader>\`, \`<CardContent>\`, \`<CardTitle>\`, etc.
+- If you need a table, use lowercase HTML: \`<table>\`, \`<thead>\`, \`<tbody>\`, \`<tr>\`, \`<td>\`.
+- If you need a layout, use lowercase HTML: \`<div className="flex">\` or \`<div className="grid">\`.
+- The ONLY capitalized tags allowed anywhere in your code are the specific Recharts and Lucide components listed above. Everything else MUST be lowercase HTML.
+- CRITICAL: DO NOT use utility libraries like \`date-fns\`, \`moment\`, or \`lodash\`. Use native JavaScript (e.g., \`new Date().toLocaleDateString()\`) for formatting.
 - No markdown code fences in output.
-- No explanation text before or after code.
+- No explanation or conversational text. Output ONLY the raw TSX code.
 - No external UI libraries.
 - No placeholder comments like "// add logic here".`;
 }

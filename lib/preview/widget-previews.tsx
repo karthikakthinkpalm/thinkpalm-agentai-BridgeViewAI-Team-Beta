@@ -5,6 +5,8 @@ import React from 'react';
 import { LiveProvider, LiveError, LivePreview } from 'react-live';
 import { PreviewProvider, usePreviewData } from './preview-context';
 import { useMemory } from '@/lib/memory/session';
+import * as Recharts from 'recharts';
+import * as LucideIcons from 'lucide-react';
 
 function CardShell({
   title,
@@ -283,7 +285,7 @@ export function DynamicWidgetPreview({ widgetName, code }: { widgetName: string,
 
   return (
     <CardShell title={widgetName} subtitle="Live Generated Code">
-      <LiveProvider code={transformedCode} scope={{ React, ...React, exports: {}, module: { exports: {} } }} noInline={true} language="tsx">
+      <LiveProvider code={transformedCode} scope={{ React, ...React, ...Recharts, ...LucideIcons, exports: {}, module: { exports: {} } }} noInline={true} language="tsx">
         <div className="rounded-xl border border-slate-700/50 bg-slate-900 p-4">
           <SafeErrorBoundary>
             <LivePreview />

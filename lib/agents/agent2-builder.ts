@@ -6,7 +6,7 @@ import {
   buildAgent2UserPrompt,
   type PromptRecord,
 } from '../prompts/maritime-prompts';
-import { getDesignSystemTemplate } from '../tools/widget-design-system';
+import { UI_ARCHETYPES } from '../prompts/archetypes';
 
 async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
   let attempt = 0;
@@ -68,75 +68,53 @@ export async function runAgent2(schema: ParsedSchema): Promise<Agent2Result> {
       techniques: ['Domain context', 'Widget-specific few-shot hints'],
     });
 
+    // Step 1: Ask the LLM to pick an archetype
+    const archetypePrompt = [
+      { role: 'system', content: 'You are an UI architect. Choose the best visual archetype for the requested maritime widget. You MUST output ONLY ONE word from this exact list: Table, KPIGrid, RadialChart, LineChart. Do not output anything else.' },
+      { role: 'user', content: `Widget Name: ${widget.name}\nDescription: ${widget.description}` }
+    ];
+
+    let archetypeResponse = await withRetry(() => groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.1,
+      messages: archetypePrompt,
+    }));
+
+    const chosenArchetype = archetypeResponse.choices[0]?.message?.content?.trim() || 'KPIGrid';
+    // Validate it's a known archetype
+    const validArchetype = UI_ARCHETYPES[chosenArchetype] ? chosenArchetype : 'KPIGrid';
+    const template = UI_ARCHETYPES[validArchetype];
+
+    prompts.push({
+      id: `a2-archetype-${widget.name}`,
+      agent: 'AGENT 2',
+      role: 'system',
+      label: `Archetype Selected: ${validArchetype}`,
+      content: template,
+      techniques: ['Archetype Template Injection'],
+    });
+
+    // Step 2: Ask the LLM to build the final component using the template
+    const finalSystemPrompt = systemPrompt + `\n\nCRITICAL INSTRUCTIONS FOR TEMPLATE INJECTION:
+1. You MUST use the following TSX template as your exact structural baseline.
+2. DO NOT change the function declaration line (e.g., keep it as \`export default function GenericTableWidget() {\`). We will handle renaming dynamically. DO NOT rename the component!
+3. DO NOT change the layout structure, Tailwind classes, or Recharts configurations.
+4. ONLY modify the variable names, title strings, and inject the mock maritime data.
+5. EXTREMELY CRITICAL: Check your TSX syntax carefully! Ensure all JSON objects have correct commas, all JSX tags are closed correctly, and no parenthesis are missing. Do not break the template's syntax!
+
+### BASELINE TEMPLATE ###
+${template}`;
+    
     const messages: any[] = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: finalSystemPrompt },
       { role: 'user', content: userPrompt },
     ];
 
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'get_design_system_template',
-          description: 'Get structural JSON exemplars and Tailwind class guidelines for a specific widget archetype.',
-          parameters: {
-            type: 'object',
-            properties: {
-              widgetType: {
-                type: 'string',
-                enum: ['table', 'kpi', 'alert', 'card', 'list'],
-                description: 'The archetype of the widget to get structural design rules for.'
-              }
-            },
-            required: ['widgetType']
-          }
-        }
-      }
-    ];
-
     let response = await withRetry(() => groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       temperature: 0.7,
       messages,
-      tools,
-      tool_choice: 'auto'
     }));
-
-    const responseMessage = response.choices[0]?.message;
-
-    if (responseMessage?.tool_calls) {
-      messages.push(responseMessage);
-      
-      for (const toolCall of responseMessage.tool_calls) {
-        if (toolCall.function.name === 'get_design_system_template') {
-          const args = JSON.parse(toolCall.function.arguments);
-          const toolResult = getDesignSystemTemplate(args.widgetType);
-          
-          prompts.push({
-            id: `a2-tool-${widget.name}-${toolCall.id}`,
-            agent: 'AGENT 2',
-            role: 'system',
-            label: `Tool Call — get_design_system_template('${args.widgetType}')`,
-            content: toolResult,
-            techniques: ['Tool execution', 'Structured JSON output'],
-          });
-
-          messages.push({
-            tool_call_id: toolCall.id,
-            role: 'tool',
-            name: toolCall.function.name,
-            content: toolResult,
-          });
-        }
-      }
-
-      // Second call to get final component code
-      response = await withRetry(() => groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.7,
-        messages,
-      }));
-    }
 
     const code = response.choices[0]?.message?.content || '';
     const clean = code.replace(/```(?:typescript|tsx|ts|jsx)?|```/g, '').trim();

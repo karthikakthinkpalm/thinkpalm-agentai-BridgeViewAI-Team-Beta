@@ -27,6 +27,7 @@ export function buildStackBlitzProject(components: Record<string, string>, activ
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
+    "recharts": "^2.12.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

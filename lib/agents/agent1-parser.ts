@@ -50,7 +50,7 @@ export async function runAgent1(prd: string): Promise<Agent1Result> {
   const userPrompt = buildAgent1UserPrompt(prd, detectedWidgets);
 
   const response = await withRetry(() => groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-3.1-8b-instant',
     temperature: 0.1,
     messages: [
       { role: 'system', content: systemPrompt },
