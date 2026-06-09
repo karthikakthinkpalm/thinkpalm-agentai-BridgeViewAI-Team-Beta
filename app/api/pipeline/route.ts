@@ -1,40 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runAgent1 } from '@/lib/agents/agent1-parser';
-import { runAgent2 } from '@/lib/agents/agent2-builder';
-import { clearRegistry } from '@/lib/tools/registry';
-import { buildWidgetHierarchy } from '@/lib/preview/hierarchy';
+import { runPipeline } from '@/lib/agents/run-pipeline';
+import { recommendationsToJson } from '@/lib/tools/visualization-recommender';
 
 export async function POST(req: NextRequest) {
   try {
     const { prd } = await req.json();
 
     if (!prd || prd.trim() === '') {
-      return NextResponse.json(
-        { error: 'PRD text is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'PRD text is required' }, { status: 400 });
     }
 
-    clearRegistry();
-
-    console.log('Agent 1 starting...');
-    const agent1 = await runAgent1(prd);
-    console.log('Agent 1 done:', agent1.schema);
-
-    console.log('Agent 2 starting...');
-    const agent2 = await runAgent2(agent1.schema);
-    console.log('Agent 2 done. Components:', Object.keys(agent2.components));
-
-    const hierarchy = buildWidgetHierarchy(agent1.schema);
-    const prompts = [...agent1.prompts, ...agent2.prompts];
+    const result = await runPipeline(prd);
 
     return NextResponse.json({
-      schema: agent1.schema,
-      components: agent2.components,
-      tree: Object.keys(agent2.components),
-      hierarchy,
-      prompts,
-      detectedWidgets: agent1.detectedWidgets,
+      schema: result.schema,
+      components: result.components,
+      tree: result.tree,
+      hierarchy: result.hierarchy,
+      prompts: result.prompts,
+      detectedWidgets: result.detectedWidgets,
+      visualizations: result.visualizationAnalysis
+        ? recommendationsToJson(result.visualizationAnalysis)
+        : [],
+      visualizationAnalysis: result.visualizationAnalysis,
+      uxReview: result.uxReview,
+      maritimeReview: result.maritimeReview,
+      featureDiscovery: result.featureDiscovery,
+      agentTrace: result.agentTrace,
+      warnings: result.warnings ?? [],
     });
   } catch (err) {
     console.error('Pipeline error:', err);

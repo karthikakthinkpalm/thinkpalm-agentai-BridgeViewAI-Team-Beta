@@ -1,9 +1,11 @@
-import { mapWidgets, normalizeWidgetList, asWidgetArray } from '@/lib/tools/widget-mapper';
+import { mapWidgets, normalizeWidgetList, normalizeWidgetName, asWidgetArray } from '@/lib/tools/widget-mapper';
 
 export interface PreviewTank {
   name: string;
   pct: number;
   rate: string;
+  daysRemaining: number;
+  capacity: string;
 }
 
 export interface PreviewCrewMember {
@@ -37,6 +39,7 @@ export interface PreviewContextData {
   weather: { wind: string; waves: string; swell: string };
   engine: { rpm: string; load: string; health: string };
   kpis: { label: string; value: string }[];
+  speedSeries: number[];
 }
 
 function hashSeed(s: string): number {
@@ -87,40 +90,38 @@ function buildTanks(text: string, vessel: string): PreviewTank[] {
   const lower = text.toLowerCase();
   const tanks: PreviewTank[] = [];
 
+  const tank = (name: string, pct: number, daily: number, cap: string): PreviewTank => ({
+    name,
+    pct,
+    rate: `${daily.toFixed(1)} t/d`,
+    capacity: cap,
+    daysRemaining: Math.max(3, Math.round(((pct / 100) * parseInt(cap, 10)) / daily)),
+  });
+
   if (lower.includes('hfo') || lower.includes('fuel') || lower.includes('bunker')) {
-    tanks.push({
-      name: 'HFO',
-      pct: seededInt(vessel + 'hfo', 55, 88),
-      rate: `${(seededInt(vessel + 'hfor', 12, 22) / 10).toFixed(1)} t/d`,
-    });
+    tanks.push(tank('HFO', seededInt(vessel + 'hfo', 55, 88), seededInt(vessel + 'hfor', 12, 22) / 10, '800 m³'));
   }
   if (lower.includes('mdo') || lower.includes('diesel') || lower.includes('fuel')) {
-    tanks.push({
-      name: 'MDO',
-      pct: seededInt(vessel + 'mdo', 30, 75),
-      rate: `${(seededInt(vessel + 'mdor', 3, 8) / 10).toFixed(1)} t/d`,
-    });
+    tanks.push(tank('MDO', seededInt(vessel + 'mdo', 30, 75), seededInt(vessel + 'mdor', 3, 8) / 10, '200 m³'));
   }
   if (lower.includes('lng') || lower.includes('boil-off') || lower.includes('gas')) {
-    tanks.push({
-      name: 'BOG',
-      pct: seededInt(vessel + 'bog', 40, 80),
-      rate: `${seededInt(vessel + 'bogr', 8, 15)} m³/d`,
-    });
+    tanks.push(tank('BOG', seededInt(vessel + 'bog', 40, 80), seededInt(vessel + 'bogr', 8, 15), '1200 m³'));
   }
   if (tanks.length === 0) {
-    return [
-      { name: 'HFO', pct: 72, rate: '18.2 t/d' },
-      { name: 'MDO', pct: 45, rate: '4.1 t/d' },
-    ];
+    return [tank('HFO', 72, 18.2, '800 m³'), tank('MDO', 45, 4.1, '200 m³')];
   }
   if (!tanks.some((t) => t.name === 'LO') && tanks.length < 3) {
-    tanks.push({ name: 'LO', pct: seededInt(vessel + 'lo', 70, 95), rate: '0.3 t/d' });
+    tanks.push(tank('LO', seededInt(vessel + 'lo', 70, 95), 0.3, '45 m³'));
   }
   return tanks.slice(0, 3);
 }
 
-function buildAlerts(text: string, priority: string): PreviewAlert[] {
+function hasWidget(activeWidgets: string[], ...names: string[]): boolean {
+  const set = new Set(activeWidgets.map((w) => normalizeWidgetName(w)));
+  return names.some((n) => set.has(normalizeWidgetName(n)));
+}
+
+function buildAlerts(text: string, priority: string, activeWidgets: string[]): PreviewAlert[] {
   const lower = text.toLowerCase();
   const alerts: PreviewAlert[] = [];
 
@@ -133,7 +134,10 @@ function buildAlerts(text: string, priority: string): PreviewAlert[] {
       time: '2m ago',
     });
   }
-  if (lower.includes('engine') || lower.includes('machinery') || lower.includes('fuel temp')) {
+  if (
+    !hasWidget(activeWidgets, 'EngineMonitor') &&
+    (lower.includes('engine') || lower.includes('machinery') || lower.includes('fuel temp'))
+  ) {
     alerts.push({
       level: 'warning',
       msg: lower.includes('engine')
@@ -149,14 +153,20 @@ function buildAlerts(text: string, priority: string): PreviewAlert[] {
       time: '24m ago',
     });
   }
-  if (lower.includes('weather') || lower.includes('route')) {
+  if (
+    !hasWidget(activeWidgets, 'VoyageProgressTracker', 'WeatherWidget') &&
+    (lower.includes('weather') || lower.includes('route'))
+  ) {
     alerts.push({
       level: 'info',
       msg: 'Weather routing update along active leg',
       time: '1h ago',
     });
   }
-  if (lower.includes('crew') || lower.includes('stcw') || lower.includes('cert')) {
+  if (
+    !hasWidget(activeWidgets, 'CrewCertificationStatus', 'CrewPanel') &&
+    (lower.includes('crew') || lower.includes('stcw') || lower.includes('cert'))
+  ) {
     alerts.push({
       level: 'info',
       msg: 'Crew certificate expiry within 90 days',
@@ -202,6 +212,11 @@ export function parsePrdForPreview(prd: string, schema?: { domain?: string; layo
     ? asWidgetArray(schema.widgets)
     : normalizeWidgetList(mapWidgets(prd));
 
+  const sogBase = seededInt(prd + vesselName + 'sog', 10, 16);
+  const speedSeries = Array.from({ length: 12 }, (_, i) =>
+    Math.max(8, sogBase + seededInt(prd + `sp${i}`, -2, 3))
+  );
+
   const progress = seededInt(prd + vesselName, 42, 88);
   const totalLegs = seededInt(vesselName + 'legs', 3, 6);
   const currentLeg = seededInt(vesselName + 'leg', 1, totalLegs);
@@ -220,7 +235,7 @@ export function parsePrdForPreview(prd: string, schema?: { domain?: string; layo
     position: `${(seededInt(prd + 'lat', 5, 45) / 10).toFixed(1)}°N`,
     tanks: buildTanks(prd, vesselName),
     crew: buildCrew(prd, vesselName),
-    alerts: buildAlerts(prd, priority),
+    alerts: buildAlerts(prd, priority, widgets),
     weather: {
       wind: `${seededInt(prd + 'wind', 12, 28)} kn`,
       waves: `${(seededInt(prd + 'wave', 15, 35) / 10).toFixed(1)} m`,
@@ -236,5 +251,6 @@ export function parsePrdForPreview(prd: string, schema?: { domain?: string; layo
       { label: 'Fuel eff.', value: `${seededInt(prd + 'eff', 82, 96)}%` },
       { label: 'On-time', value: `${seededInt(prd + 'ot', 88, 99)}%` },
     ],
+    speedSeries,
   };
 }

@@ -51,8 +51,128 @@ export const WIDGET_TEMPLATES: Record<string, any> = {
       subText: "text-xs text-slate-400",
       badge: "rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-slate-300"
     }
+  },
+  gauge: {
+    description: "Tank/engine gauges with vertical fill bars, horizontal progress, and sparklines.",
+    structure: {
+      container: "grid gap-4 sm:grid-cols-2",
+      verticalGauge: "h-36 w-16 rounded-lg border bg-slate-900/80 flex flex-col justify-end",
+      fillBar: "w-full rounded-b-md bg-gradient-to-t from-emerald-500 to-teal-400",
+      horizontalGauge: "h-2.5 rounded-full bg-slate-800",
+      sparkline: "inline SVG path for consumption trend"
+    }
+  },
+  'route-map': {
+    description: "Voyage route map with SVG path, port markers, vessel position, leg timeline.",
+    structure: {
+      mapContainer: "rounded-xl border bg-slate-950/70 overflow-hidden",
+      svg: "viewBox chart with ocean gradient, land masses, route path",
+      vesselMarker: "triangle at progress% along bezier path",
+      legTimeline: "numbered stepper for voyage legs",
+      progressRing: "SVG circle strokeDasharray for completion %"
+    }
+  },
+  'wind-rose': {
+    description: "Polar wind rose — directional sectors with speed/frequency rings.",
+    structure: {
+      container: "flex items-center justify-center rounded-xl border bg-slate-950/70 p-4",
+      svg: "polar chart with 16 compass sectors, concentric speed rings",
+      legend: "Beaufort scale color key below chart"
+    }
+  },
+  'weather-map': {
+    description: "Route-corridor weather overlay on mini nautical chart.",
+    structure: {
+      mapContainer: "relative rounded-xl border overflow-hidden h-48",
+      layers: "wind arrows, wave height contours, swell direction",
+      legend: "layer toggle chips top-right"
+    }
+  },
+  heatmap: {
+    description: "Matrix heatmap for sea state, fleet metrics, or incident density.",
+    structure: {
+      container: "rounded-xl border bg-slate-950/70 p-3",
+      grid: "CSS grid cells with color scale from emerald to rose",
+      axes: "time/vessel or subsystem/time labels",
+      colorScale: "legend bar with min/max labels"
+    }
+  },
+  'area-chart': {
+    description: "Stacked or single area chart for temporal trends.",
+    structure: {
+      container: "rounded-xl border bg-slate-950/70 p-4 h-40",
+      svg: "area path with gradient fill, axis labels",
+      crosshair: "hover vertical line with value tooltip"
+    }
+  },
+  timeline: {
+    description: "Chronological event or voyage leg timeline.",
+    structure: {
+      container: "relative pl-6 border-l-2 border-teal-500/40 space-y-4",
+      event: "absolute left-0 w-3 h-3 rounded-full -translate-x-[7px]",
+      content: "rounded-lg border bg-slate-900/60 px-3 py-2 text-sm"
+    }
+  },
+  'circular-progress': {
+    description: "SVG ring gauge for tank fill or voyage completion.",
+    structure: {
+      ring: "SVG circle strokeDasharray animated fill",
+      centerLabel: "percentage value in ring center",
+      sublabel: "days remaining or capacity below"
+    }
+  },
+  'bullet-chart': {
+    description: "Compact bullet chart — actual bar vs target with qualitative ranges.",
+    structure: {
+      row: "flex items-center gap-3 py-2",
+      range: "horizontal background bands poor/fair/good",
+      bar: "filled bar for actual value",
+      marker: "vertical line for target"
+    }
+  },
+  sparkline: {
+    description: "Inline SVG sparkline for sensor streams and KPI trends.",
+    structure: {
+      container: "flex items-end gap-1 h-12",
+      path: "SVG polyline with gradient area fill",
+      value: "current reading label right-aligned"
+    }
+  },
+  'grade-indicator': {
+    description: "CII/emissions letter grade badge (A–E) with color coding.",
+    structure: {
+      badge: "large letter grade rounded-xl font-bold text-4xl",
+      scale: "horizontal A–E scale with current position marker",
+      detail: "gCO2/t·nm value below grade"
+    }
+  },
+  'carbon-gauge': {
+    description: "Carbon intensity gauge with IMO threshold bands.",
+    structure: {
+      arc: "semi-circular gauge with green/amber/red zones",
+      needle: "current CI value pointer",
+      limit: "dashed line for regulatory limit"
+    }
+  },
+  'severity-chart': {
+    description: "Horizontal bar chart of alert counts by severity level.",
+    structure: {
+      bars: "stacked horizontal bars critical/warning/info",
+      counts: "numeric labels at bar ends",
+      filter: "click bar to filter alert stream"
+    }
+  },
+  'bubble-chart': {
+    description: "Fleet bubble chart — x/y position with bubble size encoding third metric.",
+    structure: {
+      svg: "scatter plot with sized circles per vessel",
+      axes: "speed vs fuel efficiency labels",
+      tooltip: "vessel name on hover"
+    }
   }
 };
+
+export const WIDGET_TYPE_KEYS = Object.keys(WIDGET_TEMPLATES);
 
 export function getDesignSystemTemplate(type: string): string {
   const template = WIDGET_TEMPLATES[type.toLowerCase()];

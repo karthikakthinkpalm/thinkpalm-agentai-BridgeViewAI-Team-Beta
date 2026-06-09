@@ -1,5 +1,8 @@
 import sdk, { Project } from '@stackblitz/sdk';
+import type { PreviewContextData } from './parse-prd';
+import { buildCuratedStackBlitzProject } from './stackblitz-curated';
 
+/** @deprecated Use openCuratedStackBlitz — LLM components diverge from live preview. */
 export function buildStackBlitzProject(components: Record<string, string>, activeWidgets: string[]): Project {
   const files: Record<string, string> = {
     'index.html': `<!DOCTYPE html>
@@ -14,22 +17,13 @@ export function buildStackBlitzProject(components: Record<string, string>, activ
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>`,
-    
     'package.json': `{
   "name": "bridgeview-ai-preview",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "lucide-react": "^0.344.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
+  "scripts": { "dev": "vite", "build": "tsc && vite build", "preview": "vite preview" },
+  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" },
   "devDependencies": {
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
@@ -41,59 +35,13 @@ export function buildStackBlitzProject(components: Record<string, string>, activ
     "vite": "^5.1.6"
   }
 }`,
-
-    'vite.config.ts': `import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-})`,
-
-    'tailwind.config.js': `/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}`,
-
-    'postcss.config.js': `export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}`,
-
-    'src/index.css': `@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --accent: 14 165 233;
-  --accent-2: 56 189 248;
-  --border: 51 65 85;
-  --surface: 2 6 23;
-}
-`,
-
-    'src/main.tsx': `import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)`,
-
+    'vite.config.ts': `import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\nexport default defineConfig({ plugins: [react()] })`,
+    'tailwind.config.js': `export default { content: ["./index.html","./src/**/*.{js,ts,jsx,tsx}"], theme: { extend: {} }, plugins: [] }`,
+    'postcss.config.js': `export default { plugins: { tailwindcss: {}, autoprefixer: {} } }`,
+    'src/index.css': `@tailwind base;\n@tailwind components;\n@tailwind utilities;\n`,
+    'src/main.tsx': `import React from 'react'\nimport ReactDOM from 'react-dom/client'\nimport App from './App.tsx'\nimport './index.css'\nReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)`,
   };
 
-  // Generate component files
   const imports: string[] = [];
   const renders: string[] = [];
 
@@ -101,34 +49,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     if (components[w]) {
       files[`src/components/${w}.tsx`] = components[w];
       imports.push(`import ${w} from './components/${w}';`);
-      renders.push(`        <div className="w-full">
-          <${w} />
-        </div>`);
+      renders.push(`        <div className="w-full"><${w} /></div>`);
     }
   }
 
-  // Generate App.tsx
-  files['src/App.tsx'] = `import React from 'react';
-${imports.join('\n')}
+  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-7xl mx-auto flex flex-col gap-8">\n      <h1 className="text-3xl font-bold text-sky-400 mb-4">Live Dashboard Preview</h1>\n      <div className="flex flex-col gap-8">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
 
-export default function App() {
-  return (
-    <div className="p-8 max-w-7xl mx-auto flex flex-col gap-8">
-      <h1 className="text-3xl font-bold text-sky-400 mb-4">Live Dashboard Preview</h1>
-      <div className="flex flex-col gap-8">
-${renders.join('\n')}
-      </div>
-    </div>
-  );
+  return { title: 'BridgeView AI Preview', description: 'Generated dashboard preview', template: 'node', files };
 }
-`;
 
-  return {
-    title: 'BridgeView AI Preview',
-    description: 'Generated dashboard preview',
-    template: 'node',
-    files,
-  };
+/** Open StackBlitz with curated components that match the in-app Live Preview. */
+export function openCuratedStackBlitz(previewData: PreviewContextData, activeWidgets: string[]) {
+  const project = buildCuratedStackBlitzProject(previewData, activeWidgets);
+  sdk.openProject(project, { openFile: 'src/App.tsx', view: 'preview' });
 }
 
 export function openStackBlitz(components: Record<string, string>, activeWidgets: string[]) {

@@ -1,4 +1,4 @@
-import type { ParsedSchema } from '@/lib/agents/agent1-parser';
+import type { ParsedSchema } from '@/lib/types/pipeline';
 
 export interface HierarchyNode {
   id: string;
@@ -57,11 +57,18 @@ const WIDGET_META: Record<string, { label: string; description: string }> = {
 
 export function buildWidgetHierarchy(schema: ParsedSchema): HierarchyNode {
   const widgetNodes: HierarchyNode[] = schema.widgets.map((w) => {
+    const selected = schema.selectedWidgets?.find((s) => s.name === w.name);
+    const vizSummary = selected
+      ? `${selected.visualization} — ${selected.reason}`
+      : w.recommendations?.[0]
+        ? `${w.recommendations[0].visualization} — ${w.recommendations[0].reason}`
+        : w.description;
+    const zoneLabel = w.zone ? ` [${w.zone}]` : '';
     return {
       id: w.name,
       label: w.name.replace(/([A-Z])/g, ' $1').trim(),
       type: 'widget' as const,
-      description: w.description,
+      description: `${vizSummary}${zoneLabel}`,
     };
   });
 

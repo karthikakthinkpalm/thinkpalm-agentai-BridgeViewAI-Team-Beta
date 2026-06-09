@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { PromptRecord } from '@/lib/prompts/maritime-prompts';
 import type { HierarchyNode } from '@/lib/preview/hierarchy';
+import type { VisualizationRecommendation } from '@/lib/types/visualization';
+import type { FeatureDiscoveryResult } from '@/lib/types/feature-discovery';
 import { asWidgetArray } from '@/lib/tools/widget-mapper';
 
 interface LogEntry {
@@ -20,6 +22,8 @@ interface SessionMemory {
   hierarchy: HierarchyNode | null;
   previewWidgets: string[];
   hiddenWidgets: string[];
+  visualizations: VisualizationRecommendation[];
+  featureDiscovery: FeatureDiscoveryResult | null;
 
   setPrd: (text: string) => void;
   setSchema: (s: object) => void;
@@ -31,6 +35,8 @@ interface SessionMemory {
   setHierarchy: (h: HierarchyNode | null) => void;
   setPreviewWidgets: (widgets: string[]) => void;
   setHiddenWidgets: (widgets: string[]) => void;
+  setVisualizations: (v: VisualizationRecommendation[]) => void;
+  setFeatureDiscovery: (f: FeatureDiscoveryResult | null) => void;
   reset: () => void;
 }
 
@@ -45,6 +51,8 @@ export const useMemory = create<SessionMemory>((set) => ({
   hierarchy: null,
   previewWidgets: [],
   hiddenWidgets: [],
+  visualizations: [],
+  featureDiscovery: null,
 
   setPrd: (prdText) => set({ prdText }),
   setSchema: (schema) => set({ schema }),
@@ -56,6 +64,8 @@ export const useMemory = create<SessionMemory>((set) => ({
     set({ previewWidgets: asWidgetArray(previewWidgets) }),
   setHiddenWidgets: (hiddenWidgets) =>
     set({ hiddenWidgets: asWidgetArray(hiddenWidgets) }),
+  setVisualizations: (visualizations) => set({ visualizations }),
+  setFeatureDiscovery: (featureDiscovery) => set({ featureDiscovery }),
 
   addComponent: (name, code) =>
     set((state) => ({
@@ -85,5 +95,7 @@ export const useMemory = create<SessionMemory>((set) => ({
       hierarchy: null,
       previewWidgets: [],
       hiddenWidgets: [],
+      visualizations: [],
+      featureDiscovery: null,
     }),
 }));
