@@ -1,53 +1,32 @@
-/** Keyword → canonical maritime widget names for hierarchy proposals */
+/** Keyword → canonical maritime widget names (config-driven + optional LLM fallback) */
 
-export const ALL_MARITIME_WIDGETS = [
-  'VoyageProgressTracker',
-  'FuelGaugeCards',
-  'CrewCertificationStatus',
-  'AlertPanel',
-  'WeatherWidget',
-  'EngineMonitor',
-  'KPIDashboard',
-] as const;
+import { getWidgetMapperConfig } from './config-loader';
+
+const config = () => getWidgetMapperConfig();
+
+export const ALL_MARITIME_WIDGETS = config().allWidgets;
 
 export type MaritimeWidget = (typeof ALL_MARITIME_WIDGETS)[number];
 
-const KEYWORD_MAP: [string[], MaritimeWidget][] = [
-  [['voyage', 'tracking', 'ais', 'route', 'ship', 'progress', 'leg', 'eta'], 'VoyageProgressTracker'],
-  [['fuel', 'consumption', 'hfo', 'mdo', 'tank', 'gauge', 'bunker'], 'FuelGaugeCards'],
-  [['crew', 'fatigue', 'stcw', 'certification', 'roster', 'officer'], 'CrewCertificationStatus'],
-  [['alert', 'emergency', 'alarm', 'critical', 'warning'], 'AlertPanel'],
-  [['weather', 'wave', 'wind', 'swell'], 'WeatherWidget'],
-  [['engine', 'rpm', 'performance', 'machinery'], 'EngineMonitor'],
-  [['kpi', 'efficiency', 'cii', 'performance metric'], 'KPIDashboard'],
-];
+export const WIDGET_ALIASES: Record<string, string> = config().aliases;
 
-/** Legacy aliases → canonical names */
-export const WIDGET_ALIASES: Record<string, MaritimeWidget> = {
-  VoyageTracker: 'VoyageProgressTracker',
-  FuelAnalytics: 'FuelGaugeCards',
-  CrewPanel: 'CrewCertificationStatus',
-  AlertCenter: 'AlertPanel',
-};
-
-export function mapWidgets(text: string): MaritimeWidget[] {
+function mapWidgetsFromConfig(text: string): string[] {
   const lower = text.toLowerCase();
-  const found: MaritimeWidget[] = [];
+  const found: string[] = [];
 
-  for (const [keywords, widget] of KEYWORD_MAP) {
-    if (keywords.some((k) => lower.includes(k))) {
-      if (!found.includes(widget)) found.push(widget);
+  for (const entry of config().keywordMap) {
+    if (entry.keywords.some((k) => lower.includes(k))) {
+      if (!found.includes(entry.widget)) found.push(entry.widget);
     }
   }
 
   if (found.length > 0) return found;
+  return [...config().defaultWidgets];
+}
 
-  return [
-    'VoyageProgressTracker',
-    'FuelGaugeCards',
-    'CrewCertificationStatus',
-    'AlertPanel',
-  ];
+/** Sync config-driven widget mapping (used by live preview). */
+export function mapWidgets(text: string): string[] {
+  return mapWidgetsFromConfig(text);
 }
 
 export function normalizeWidgetName(name: string): string {

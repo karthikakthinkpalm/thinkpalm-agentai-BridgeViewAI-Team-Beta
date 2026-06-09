@@ -1,0 +1,40 @@
+{
+  "templates": [
+    {
+      "id": "emissions_analyzer",
+      "aliases": ["cii", "co2", "emission", "carbon", "eexi", "sustainability"],
+      "delegateTo": "feature_discovery",
+      "description": "Emissions and CII regulatory tracking for sustainability PRDs"
+    },
+    {
+      "id": "fleet_widget_mapper",
+      "aliases": ["fleet", "multi-vessel", "multi vessel", "benchmark", "comparison"],
+      "delegateTo": "map_widgets",
+      "description": "Fleet-level widget mapping across multiple vessels"
+    },
+    {
+      "id": "route_visualization_advisor",
+      "aliases": ["route map", "ais", "gps track", "voyage map", "ecdis", "waypoint"],
+      "delegateTo": "recommend_visualizations",
+      "description": "Route and AIS map visualization recommendations"
+    },
+    {
+      "id": "machinery_sensor_advisor",
+      "aliases": ["sensor stream", "telemetry", "mqtt", "real-time", "engine rpm", "machinery"],
+      "delegateTo": "recommend_visualizations",
+      "description": "Machinery and sensor stream visualization guidance"
+    },
+    {
+      "id": "compliance_discovery",
+      "aliases": ["stcw", "compliance", "certification", "audit", "marpol", "imo"],
+      "delegateTo": "feature_discovery",
+      "description": "Compliance and certification gap analysis"
+    },
+    {
+      "id": "archetype_template_fetcher",
+      "aliases": ["design system", "archetype", "component template", "tailwind structure"],
+      "delegateTo": "get_design_system_template",
+      "description": "Fetch design-system JSON for a widget archetype"
+    }
+  ]
+}

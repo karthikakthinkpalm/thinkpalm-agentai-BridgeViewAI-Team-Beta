@@ -1,4 +1,4 @@
-import { groq } from '../anthropic';
+import { createChatCompletion } from '../groq-chat';
 import { checkExists, registerComponent } from '../tools/registry';
 import type { ParsedSchema } from '../types/pipeline';
 import {
@@ -6,9 +6,9 @@ import {
   buildAgent5UserPrompt,
   type PromptRecord,
 } from '../prompts/maritime-prompts';
-import { getDesignSystemTemplate } from '../tools/widget-design-system';
+import { getDesignSystemTemplate } from '../tools/widget-design-system.server';
 import { buildFallbackComponent } from './fallback-components';
-import { isLlmUnavailableError, isRateLimitError, withRetry } from './shared';
+import { isLlmUnavailableError, isRateLimitError } from './shared';
 
 export interface Agent5Result {
   components: Record<string, string>;
@@ -23,6 +23,7 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
   const fallbackWidgets: string[] = [];
   const warnings: string[] = [];
   const systemPrompt = buildAgent5SystemPrompt();
+  let preferredModel: string | null = null;
 
   for (const widget of schema.widgets) {
     if (checkExists(widget.name)) continue;
@@ -33,7 +34,7 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
       .join('\n');
 
     const archetype = widget.archetype ?? 'card';
-    const designSystemTemplate = getDesignSystemTemplate(archetype);
+    const designSystemTemplate = await getDesignSystemTemplate(archetype);
 
     const userPrompt = buildAgent5UserPrompt(
       widget.name,
@@ -73,19 +74,18 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
     });
 
     try {
-      const response = await withRetry(
-        () =>
-          groq.chat.completions.create({
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.7,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
-          }),
-        3,
-        'Agent 5'
+      const { response, model } = await createChatCompletion(
+        {
+          temperature: 0.7,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        },
+        'Agent 5',
+        { preferredModel }
       );
+      preferredModel = model;
 
       const code = response.choices[0]?.message?.content || '';
       const clean = code.replace(/```(?:typescript|tsx|ts|jsx)?|```/g, '').trim();

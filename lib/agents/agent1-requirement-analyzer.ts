@@ -1,5 +1,5 @@
-import { groq } from '../anthropic';
-import { mapWidgets } from '../tools/widget-mapper';
+import { createChatCompletion } from '../groq-chat';
+import { mapWidgetsAsync } from '../tools/widget-mapper.server';
 import { parsePrdForPreview } from '../preview/parse-prd';
 import type { ExtractedMetric, RequirementAnalysis } from '../types/pipeline';
 import type { PromptRecord } from '../prompts/maritime-prompts';
@@ -7,7 +7,6 @@ import {
   buildAgent1RequirementSystemPrompt,
   buildAgent1RequirementUserPrompt,
 } from '../prompts/maritime-prompts';
-import { withRetry } from './shared';
 
 export interface Agent1Result {
   requirements: RequirementAnalysis;
@@ -72,24 +71,21 @@ function detectDomain(prd: string): string {
 }
 
 export async function runAgent1RequirementAnalyzer(prd: string): Promise<Agent1Result> {
-  const detectedWidgets = mapWidgets(prd);
+  const { widgets: detectedWidgets } = await mapWidgetsAsync(prd);
   const heuristicMetrics = extractMetricsHeuristic(prd);
   const systemPrompt = buildAgent1RequirementSystemPrompt();
   const userPrompt = buildAgent1RequirementUserPrompt(prd, detectedWidgets);
 
   let llmMetrics: ExtractedMetric[] = [];
   try {
-    const response = await withRetry(
-      () =>
-        groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
-          temperature: 0.1,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-        }),
-      3,
+    const { response } = await createChatCompletion(
+      {
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      },
       'Agent 1'
     );
     const raw = response.choices[0]?.message?.content || '';

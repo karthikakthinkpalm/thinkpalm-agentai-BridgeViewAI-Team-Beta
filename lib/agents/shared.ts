@@ -17,7 +17,15 @@ export function isLlmUnavailableError(err: unknown): boolean {
   return (
     e.status === 401 ||
     e.status === 403 ||
-    Boolean(e.message && (e.message.includes('API key') || e.message.includes('invalid_api_key')))
+    e.status === 404 ||
+    e.status === 503 ||
+    Boolean(
+      e.message &&
+        (e.message.includes('API key') ||
+          e.message.includes('invalid_api_key') ||
+          e.message.includes('decommissioned') ||
+          e.message.includes('model_not_found'))
+    )
   );
 }
 

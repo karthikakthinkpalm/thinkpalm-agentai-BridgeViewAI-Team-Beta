@@ -1,4 +1,5 @@
-import { runFeatureDiscovery, mergeDiscoveredWidgets } from '../tools/feature-discovery';
+import { mergeDiscoveredWidgets } from '../tools/feature-discovery';
+import { runFeatureDiscoveryAsync } from '../tools/feature-discovery.server';
 import type { FeatureDiscoveryResult } from '../types/feature-discovery';
 import type { RequirementAnalysis, SelectedWidget } from '../types/pipeline';
 import type { PromptRecord } from '../prompts/maritime-prompts';
@@ -8,16 +9,17 @@ export interface BridgeViewIntelligenceResult {
   enrichedWidgets: SelectedWidget[];
   autoExpandedWidgets: string[];
   prompts: PromptRecord[];
+  recommendationSource?: 'config' | 'llm';
 }
 
-/** BridgeView AI — autonomous feature discovery and widget expansion. */
-export function runBridgeViewIntelligence(
+/** BridgeView AI — config-driven feature discovery with LLM fallback. */
+export async function runBridgeViewIntelligence(
   prd: string,
   requirements: RequirementAnalysis,
   selectedWidgets: SelectedWidget[],
   dataset?: Record<string, unknown>
-): BridgeViewIntelligenceResult {
-  const discovery = runFeatureDiscovery(prd, {
+): Promise<BridgeViewIntelligenceResult> {
+  const discovery = await runFeatureDiscoveryAsync(prd, {
     requirements,
     selectedWidgets,
     dataset,
@@ -46,14 +48,15 @@ export function runBridgeViewIntelligence(
           coverageScore: discovery.dashboardHealth.coverageScore,
           missingCapabilities: discovery.dashboardHealth.missingCapabilities,
           autoExpanded,
+          recommendationSource: discovery.recommendationSource ?? 'config',
         },
         null,
         2
       ),
       techniques: [
-        'Domain coverage analysis',
+        'Config-driven domain rules',
+        'LLM fallback for sparse matches',
         'Vessel-type intelligence',
-        'Confidence-gated recommendations',
         'Autonomous widget expansion',
       ],
     },
@@ -78,5 +81,6 @@ export function runBridgeViewIntelligence(
     enrichedWidgets,
     autoExpandedWidgets: [...new Set([...autoExpanded, ...discovery.autoExpandedWidgets])],
     prompts,
+    recommendationSource: discovery.recommendationSource,
   };
 }

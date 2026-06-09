@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
       featureDiscovery: result.featureDiscovery,
       agentTrace: result.agentTrace,
       warnings: result.warnings ?? [],
+      adaptivePlan: result.adaptivePlan,
+      provisionedTools: result.provisionedTools ?? [],
     });
   } catch (err) {
     console.error('Pipeline error:', err);

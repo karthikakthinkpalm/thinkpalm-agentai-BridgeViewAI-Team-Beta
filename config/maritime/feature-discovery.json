@@ -1,0 +1,242 @@
+{
+  "confidenceThreshold": 0.7,
+  "allDomains": [
+    "Navigation",
+    "Weather",
+    "Machinery",
+    "Safety",
+    "Compliance",
+    "Crew",
+    "Cargo",
+    "Fleet",
+    "Security",
+    "Sustainability"
+  ],
+  "domainRules": [
+    {
+      "domain": "Navigation",
+      "metricPatterns": ["position|lat|lng|ais|route|voyage|eta|speed|cog|heading|waypoint"],
+      "widgetPatterns": ["Voyage|AIS|GPS|Tracker"],
+      "defaultWidget": "VoyageProgressTracker",
+      "missingFeature": {
+        "feature": "Interactive Route Map + AIS Overlay",
+        "widget": "VoyageProgressTracker",
+        "domain": "Navigation",
+        "businessValue": "Situational awareness for bridge officers — position, route, and ETA at a glance",
+        "priority": "critical",
+        "confidence": 0.92,
+        "reason": "Navigation data detected but no map or voyage tracker widget in dashboard"
+      }
+    },
+    {
+      "domain": "Weather",
+      "metricPatterns": ["weather|wind|wave|swell|sea.?state|meteo"],
+      "widgetPatterns": ["Weather"],
+      "defaultWidget": "WeatherWidget",
+      "missingFeature": {
+        "feature": "Weather Risk Overlay",
+        "widget": "WeatherWidget",
+        "domain": "Weather",
+        "businessValue": "Route-corridor weather enables proactive course and speed decisions",
+        "priority": "high",
+        "confidence": 0.88,
+        "reason": "Environmental exposure affects safety and fuel — weather panel missing from layout"
+      }
+    },
+    {
+      "domain": "Machinery",
+      "metricPatterns": ["engine|rpm|load|machinery|shaft|bearing|temperature|pressure|sensor"],
+      "widgetPatterns": ["Engine|Monitor|Sensor"],
+      "defaultWidget": "EngineMonitor",
+      "missingFeature": {
+        "feature": "Machinery Health Dashboard",
+        "widget": "EngineMonitor",
+        "domain": "Machinery",
+        "businessValue": "Early detection of machinery anomalies prevents costly breakdowns at sea",
+        "priority": "high",
+        "confidence": 0.9,
+        "reason": "Engine or sensor telemetry present without machinery monitoring widget"
+      }
+    },
+    {
+      "domain": "Safety",
+      "metricPatterns": ["alert|alarm|critical|warning|emergency|incident|collision|mayday"],
+      "widgetPatterns": ["Alert"],
+      "defaultWidget": "AlertPanel",
+      "missingFeature": {
+        "feature": "Safety Alert Stream",
+        "widget": "AlertPanel",
+        "domain": "Safety",
+        "businessValue": "Prioritized alert stream ensures critical events reach the bridge immediately",
+        "priority": "critical",
+        "confidence": 0.95,
+        "reason": "Safety-critical operations require a dedicated alert panel — none detected"
+      }
+    },
+    {
+      "domain": "Compliance",
+      "metricPatterns": ["compliance|regulation|imo|marpol|ecdis|audit|certificate|inspection"],
+      "widgetPatterns": ["Crew|Cert|Compliance"],
+      "defaultWidget": "CrewCertificationStatus",
+      "missingFeature": {
+        "feature": "Compliance Tracker",
+        "widget": "CrewCertificationStatus",
+        "domain": "Compliance",
+        "businessValue": "Regulatory compliance tracking reduces port-state control detention risk",
+        "priority": "high",
+        "confidence": 0.85,
+        "reason": "Compliance context implied but no certification or audit tracker widget"
+      }
+    },
+    {
+      "domain": "Crew",
+      "metricPatterns": ["crew|stcw|roster|officer|fatigue|watch|muster"],
+      "widgetPatterns": ["Crew"],
+      "defaultWidget": "CrewCertificationStatus",
+      "missingFeature": {
+        "feature": "Crew Status Panel",
+        "widget": "CrewCertificationStatus",
+        "domain": "Crew",
+        "businessValue": "Crew readiness and certification status supports safe manning decisions",
+        "priority": "high",
+        "confidence": 0.87,
+        "reason": "Crew data referenced but no roster or certification widget assigned"
+      }
+    },
+    {
+      "domain": "Cargo",
+      "metricPatterns": ["cargo|container|tank|ballast|load|utilization|teu|lng|pressure|boil"],
+      "widgetPatterns": ["Fuel|KPI|Cargo"],
+      "defaultWidget": "KPIDashboard",
+      "missingFeature": {
+        "feature": "Cargo Operations Dashboard",
+        "widget": "KPIDashboard",
+        "domain": "Cargo",
+        "businessValue": "Cargo state monitoring prevents operational delays and cargo damage",
+        "priority": "medium",
+        "confidence": 0.82,
+        "reason": "Cargo-related metrics detected without dedicated cargo monitoring widget"
+      }
+    },
+    {
+      "domain": "Fleet",
+      "metricPatterns": ["fleet|multi.?vessel|comparison|benchmark|vessels"],
+      "widgetPatterns": ["KPI|Fleet"],
+      "defaultWidget": "KPIDashboard",
+      "missingFeature": {
+        "feature": "Fleet Comparison Dashboard",
+        "widget": "KPIDashboard",
+        "domain": "Fleet",
+        "businessValue": "Cross-vessel benchmarking identifies performance outliers across the fleet",
+        "priority": "medium",
+        "confidence": 0.8,
+        "reason": "Fleet operations context but no comparison or fleet overview widget"
+      }
+    },
+    {
+      "domain": "Security",
+      "metricPatterns": ["security|piracy|threat|intrusion|access|cyber"],
+      "widgetPatterns": ["Alert|Security"],
+      "defaultWidget": "AlertPanel",
+      "missingFeature": {
+        "feature": "Security Event Monitor",
+        "widget": "AlertPanel",
+        "domain": "Security",
+        "businessValue": "Maritime security events require rapid escalation to bridge and shore",
+        "priority": "high",
+        "confidence": 0.78,
+        "reason": "Security context in PRD without dedicated threat monitoring panel"
+      }
+    },
+    {
+      "domain": "Sustainability",
+      "metricPatterns": ["cii|co2|emission|carbon|eexi|sustainability|green"],
+      "widgetPatterns": ["KPI|CII"],
+      "defaultWidget": "KPIDashboard",
+      "missingFeature": {
+        "feature": "Emissions & CII Tracker",
+        "widget": "KPIDashboard",
+        "domain": "Sustainability",
+        "businessValue": "CII and emissions tracking supports regulatory compliance and charter requirements",
+        "priority": "medium",
+        "confidence": 0.83,
+        "reason": "Sustainability metrics referenced but no emissions or efficiency dashboard"
+      }
+    }
+  ],
+  "vesselTypeRules": [
+    { "pattern": "\\blng\\s+carrier\\b|\\blng\\s+pioneer\\b|\\bboil.?off\\b|\\bcryogenic\\b", "type": "LNG Carrier" },
+    { "pattern": "\\bpassenger\\s+ferry\\b|\\bferry\\b|\\bmuster\\b|\\bpassenger\\s+count\\b", "type": "Passenger Ferry" },
+    { "pattern": "\\bcontainer\\s+vessel\\b|\\bcontainer\\s+ship\\b|\\bteu\\b|\\bcontainer\\s+utilization\\b", "type": "Container Vessel" },
+    { "pattern": "\\btanker\\b|\\bcrude\\b|\\bproduct\\s+tanker\\b", "type": "Tanker" },
+    { "pattern": "\\bbulk\\s+carrier\\b|\\bbulk\\s+vessel\\b", "type": "Bulk Carrier" }
+  ],
+  "vesselIntelligence": {
+    "LNG Carrier": [
+      { "feature": "Tank Pressure Monitoring", "widget": "FuelGaugeCards", "domain": "Cargo", "businessValue": "Cryogenic tank pressure is safety-critical for LNG cargo integrity", "priority": "critical", "confidence": 0.94, "reason": "LNG carrier operations require continuous tank pressure visibility" },
+      { "feature": "Cargo Temperature Monitoring", "widget": "SensorStreamPanel", "domain": "Cargo", "businessValue": "Cargo temperature drift indicates boil-off or insulation failure", "priority": "critical", "confidence": 0.93, "reason": "LNG cargo temperature is a primary operational KPI for LNG carriers" },
+      { "feature": "Boil-Off Gas Monitoring", "widget": "SensorStreamPanel", "domain": "Sustainability", "businessValue": "BOG rate drives fuel planning and emissions reporting", "priority": "high", "confidence": 0.91, "reason": "LNG carriers must track boil-off gas for voyage economics and safety" },
+      { "feature": "Gas Leak Detection Panel", "widget": "AlertPanel", "domain": "Safety", "businessValue": "Early gas leak detection prevents catastrophic cargo incidents", "priority": "critical", "confidence": 0.96, "reason": "LNG operations mandate gas detection alerting on the bridge" }
+    ],
+    "Passenger Ferry": [
+      { "feature": "Passenger Count Dashboard", "widget": "KPIDashboard", "domain": "Cargo", "businessValue": "Accurate passenger count supports SOLAS compliance and evacuation planning", "priority": "critical", "confidence": 0.92, "reason": "Passenger ferries require real-time occupancy monitoring" },
+      { "feature": "Muster Station Monitoring", "widget": "AlertPanel", "domain": "Safety", "businessValue": "Muster readiness ensures rapid evacuation in emergency scenarios", "priority": "critical", "confidence": 0.9, "reason": "Passenger vessel safety regulations require muster station visibility" },
+      { "feature": "Safety Equipment Dashboard", "widget": "CrewCertificationStatus", "domain": "Safety", "businessValue": "Life-saving appliance status reduces PSC deficiency risk", "priority": "high", "confidence": 0.88, "reason": "Passenger ferries must track safety equipment readiness" }
+    ],
+    "Container Vessel": [
+      { "feature": "Cargo Distribution Map", "widget": "KPIDashboard", "domain": "Cargo", "businessValue": "Stowage distribution affects stability and port discharge efficiency", "priority": "high", "confidence": 0.89, "reason": "Container vessels benefit from bay/row tier distribution visibility" },
+      { "feature": "Container Utilization Tracker", "widget": "KPIDashboard", "domain": "Cargo", "businessValue": "Utilization metrics drive revenue and slot planning decisions", "priority": "medium", "confidence": 0.86, "reason": "Container operations center on TEU utilization KPIs" },
+      { "feature": "Port Operations Dashboard", "widget": "VoyageProgressTracker", "domain": "Navigation", "businessValue": "Berth scheduling and crane productivity depend on accurate ETA and port status", "priority": "high", "confidence": 0.87, "reason": "Container vessel schedules are tightly coupled to port turnaround" }
+    ],
+    "Tanker": [
+      { "feature": "Tank Level & Segregation Monitor", "widget": "FuelGaugeCards", "domain": "Cargo", "businessValue": "Cargo segregation and ullage prevent contamination and overflow incidents", "priority": "critical", "confidence": 0.91, "reason": "Tanker operations require per-tank level monitoring" }
+    ],
+    "Bulk Carrier": [
+      { "feature": "Hold Condition Monitor", "widget": "KPIDashboard", "domain": "Cargo", "businessValue": "Hold moisture and temperature protect cargo quality during voyage", "priority": "high", "confidence": 0.84, "reason": "Bulk carriers need hold environment visibility" }
+    ]
+  },
+  "predictivePatterns": [
+    { "pattern": "\\b(history|historical|trend|24h|timeseries|past\\s+voyage)\\b", "feature": { "feature": "Predictive ETA", "widget": "VoyageProgressTracker", "domain": "Navigation", "businessValue": "ML-enhanced ETA reduces port scheduling uncertainty", "priority": "medium", "confidence": 0.82, "reason": "Historical voyage data enables predictive arrival forecasting" } },
+    { "pattern": "\\b(fuel|consumption|burn|bunker)\\b", "feature": { "feature": "Fuel Consumption Forecast", "widget": "FuelGaugeCards", "domain": "Sustainability", "businessValue": "Fuel forecasting optimizes bunkering and voyage economics", "priority": "medium", "confidence": 0.85, "reason": "Fuel trend history supports consumption forecasting" } },
+    { "pattern": "\\b(engine|rpm|machinery|maintenance|hours)\\b", "feature": { "feature": "Maintenance Forecast", "widget": "EngineMonitor", "domain": "Machinery", "businessValue": "Predictive maintenance reduces unplanned downtime at sea", "priority": "high", "confidence": 0.81, "reason": "Machinery telemetry with run-hours enables maintenance prediction" } },
+    { "pattern": "\\b(weather|wave|wind|route)\\b", "feature": { "feature": "Route Risk Prediction", "widget": "WeatherWidget", "domain": "Safety", "businessValue": "Weather-risk scoring supports go/no-go routing decisions", "priority": "high", "confidence": 0.79, "reason": "Combined route and weather data enables risk prediction overlays" } },
+    { "pattern": "\\b(route|voyage|optimization|efficiency)\\b", "feature": { "feature": "Route Optimization Advisor", "widget": "VoyageProgressTracker", "domain": "Navigation", "businessValue": "Optimized routing reduces fuel burn and time en route", "priority": "medium", "confidence": 0.8, "reason": "Voyage planning context with efficiency goals suggests route optimization" } }
+  ],
+  "requirementSignals": {
+    "voyageInformation": "voyage|route|leg|eta|passage|port",
+    "navigationData": "position|lat|lng|ais|speed|cog|heading|waypoint",
+    "fleetData": "fleet|multi.?vessel|vessels|benchmark",
+    "engineData": "engine|rpm|load|machinery|shaft",
+    "fuelData": "fuel|hfo|mdo|bunker|tank|consumption",
+    "weatherData": "weather|wind|wave|swell|meteo",
+    "crewData": "crew|stcw|roster|officer|certification",
+    "cargoData": "cargo|container|tank|ballast|teu|load",
+    "complianceData": "compliance|regulation|imo|marpol|audit|inspection",
+    "safetyData": "safety|alert|emergency|incident|collision"
+  },
+  "domainFieldPatterns": [
+    { "patterns": ["lat|lng|position|ais|route|voyage"], "domain": "Navigation" },
+    { "patterns": ["wind|wave|weather|swell"], "domain": "Weather" },
+    { "patterns": ["engine|rpm|machinery"], "domain": "Machinery" },
+    { "patterns": ["alert|alarm|incident"], "domain": "Safety" },
+    { "patterns": ["crew|cert|stcw"], "domain": "Crew" },
+    { "patterns": ["fuel|tank|cargo|container"], "domain": "Cargo" },
+    { "patterns": ["fleet|vessel"], "domain": "Fleet" },
+    { "patterns": ["cii|emission|co2"], "domain": "Sustainability" }
+  ],
+  "widgetArchetypes": [
+    { "patterns": ["Voyage|AIS|GPS|Tracker"], "archetype": "route-map" },
+    { "patterns": ["Fuel|Engine|Sensor|Gauge"], "archetype": "gauge" },
+    { "patterns": ["Alert"], "archetype": "alert" },
+    { "patterns": ["Crew"], "archetype": "list" },
+    { "patterns": ["KPI"], "archetype": "kpi" },
+    { "patterns": ["Weather"], "archetype": "kpi" }
+  ],
+  "healthDomainGroups": {
+    "navigationCoverage": ["Navigation", "Weather"],
+    "operationalCoverage": ["Machinery", "Cargo", "Weather"],
+    "safetyCoverage": ["Safety", "Security"],
+    "complianceCoverage": ["Compliance", "Crew"],
+    "fleetCoverage": ["Fleet", "Sustainability"]
+  }
+}

@@ -134,7 +134,7 @@ export default function Home() {
 
       const trace = (data.agentTrace as { agent: string; status: string; detail: string }[]) ?? [];
       for (const step of trace) {
-        addLog(step.agent, step.detail);
+        addLog(step.agent, step.detail ?? step.status ?? 'completed');
       }
 
       for (const warning of (data.warnings as string[] | undefined) ?? []) {
@@ -314,6 +314,9 @@ export default function Home() {
                     log.agent === 'AGENT 6' ? 'text-emerald-400' :
                     log.agent === 'AGENT 7' ? 'text-orange-400' :
                     log.agent === 'BRIDGEVIEW' ? 'text-pink-400' :
+                    log.agent === 'ADAPTIVE PLAN' ? 'text-fuchsia-400' :
+                    log.agent === 'TOOL PROVISIONER' ? 'text-lime-400' :
+                    log.agent.includes('SKIPPED') || (log.message?.toLowerCase().includes('skipped') ?? false) ? 'text-slate-500' :
                     log.agent === 'PREVIEW' ? 'text-cyan-400' :
                     log.agent === 'EXPORT' ? 'text-amber-400' :
                     log.agent === 'MEMORY' ? 'text-purple-400' :

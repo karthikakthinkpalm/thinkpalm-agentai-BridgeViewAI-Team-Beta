@@ -1,0 +1,111 @@
+{
+  "agents": [
+    {
+      "id": "requirement_analyzer",
+      "essential": true,
+      "triggers": [],
+      "antiTriggers": [],
+      "description": "Always required — extracts entities and metrics from the PRD"
+    },
+    {
+      "id": "tool_provisioner",
+      "essential": false,
+      "triggers": ["widget|dashboard|metric|data|vessel|fuel|crew|alert|chart|map|fleet|emission|cii"],
+      "antiTriggers": [],
+      "description": "Dynamically registers tools required by this PRD from catalog and LLM suggestions"
+    },
+    {
+      "id": "data_classifier",
+      "essential": false,
+      "triggers": ["metric|kpi|sensor|telemetry|data\\s+field|timeseries|measurement"],
+      "antiTriggers": ["single\\s+widget|one\\s+panel|minimal|prototype\\s+only"],
+      "description": "Classify metrics when PRD has multiple data dimensions"
+    },
+    {
+      "id": "visualization_selector",
+      "essential": false,
+      "triggers": ["widget|dashboard|panel|gauge|map|chart|monitor|tracker|visual"],
+      "antiTriggers": [],
+      "description": "Map metrics to widgets when building a multi-widget dashboard"
+    },
+    {
+      "id": "bridgeview_intelligence",
+      "essential": false,
+      "triggers": ["fleet|coverage|discovery|missing|expand|domain|vessel\\s+type|lng|ferry|container|recommend"],
+      "antiTriggers": ["single\\s+widget|minimal|prototype"],
+      "description": "Feature discovery for complex or multi-domain PRDs"
+    },
+    {
+      "id": "layout_planner",
+      "essential": false,
+      "triggers": ["layout|dashboard|bridge|multi|grid|zone|placement|several|multiple\\s+widget"],
+      "antiTriggers": ["single\\s+widget|one\\s+panel|widget\\s+only"],
+      "description": "Layout zones when PRD implies multi-widget dashboard"
+    },
+    {
+      "id": "schema_builder",
+      "essential": true,
+      "triggers": [],
+      "antiTriggers": [],
+      "description": "Always required — assembles final schema"
+    },
+    {
+      "id": "react_generator",
+      "essential": true,
+      "triggers": [],
+      "antiTriggers": [],
+      "description": "Always required — generates React components"
+    },
+    {
+      "id": "ux_reviewer",
+      "essential": false,
+      "triggers": ["accessibility|ux|usability|aria|wcag|review|production|polish"],
+      "antiTriggers": ["prototype|draft|quick|minimal"],
+      "description": "UX validation for production-quality PRDs"
+    },
+    {
+      "id": "maritime_expert",
+      "essential": false,
+      "triggers": ["vessel|maritime|bridge|ais|safety|stcw|navigation|ecdis|nautical|fleet|cargo|engine"],
+      "antiTriggers": ["generic|non-maritime|land|web\\s+app"],
+      "description": "Maritime domain review when PRD is vessel/bridge focused"
+    }
+  ],
+  "tools": [
+    {
+      "id": "recommend_visualizations",
+      "essential": false,
+      "triggers": ["chart|map|gauge|visualization|graph|heatmap|timeline|wind\\s+rose|route\\s+map"],
+      "antiTriggers": [],
+      "description": "Field-level viz recommendations when PRD mentions chart types"
+    },
+    {
+      "id": "map_widgets",
+      "essential": false,
+      "triggers": ["widget|tracker|panel|gauge|fuel|crew|alert|weather|engine|voyage"],
+      "antiTriggers": [],
+      "description": "Early widget keyword mapping"
+    },
+    {
+      "id": "feature_discovery",
+      "essential": false,
+      "triggers": ["coverage|missing|gap|recommend|fleet|domain|capability"],
+      "antiTriggers": ["single\\s+widget|minimal"],
+      "description": "Standalone domain coverage scan (alternative to bridgeview agent)"
+    },
+    {
+      "id": "get_design_system_template",
+      "essential": false,
+      "triggers": ["archetype|design\\s+system|template|table|kpi|card"],
+      "antiTriggers": [],
+      "description": "On-demand design templates — usually invoked by react generator"
+    }
+  ],
+  "refinementRules": {
+    "skipDataClassifierWhenMetricsBelow": 2,
+    "forceMaritimeExpertWhenPriority": "safety-critical",
+    "forceUxReviewerWhenPriority": "safety-critical",
+    "forceBridgeviewWhenMetricsAbove": 5,
+    "forceLayoutWhenWidgetsAbove": 2
+  }
+}

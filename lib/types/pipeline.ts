@@ -109,4 +109,24 @@ export interface PipelineResult {
   maritimeReview: MaritimeReviewResult;
   agentTrace: { agent: string; status: string; detail: string }[];
   warnings?: string[];
+  adaptivePlan?: {
+    agents: string[];
+    tools: string[];
+    skipped: { id: string; type: 'agent' | 'tool'; reason: string }[];
+    rationale: string;
+    provisionedTools?: {
+      id: string;
+      description: string;
+      delegateTo?: string;
+      reason: string;
+      source: 'catalog' | 'config' | 'llm';
+    }[];
+  };
+  provisionedTools?: {
+    id: string;
+    description: string;
+    delegateTo?: string;
+    reason: string;
+    source: 'catalog' | 'config' | 'llm';
+  }[];
 }
