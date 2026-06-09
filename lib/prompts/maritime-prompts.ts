@@ -70,7 +70,13 @@ TASK: Generate ONE production-ready React functional component.
 
 REQUIREMENTS:
 - TypeScript + Tailwind CSS only (utility classes).
-- CRITICAL: You have access to a tool named \`get_design_system_template\`. Call it with a widget archetype (e.g. 'table', 'kpi', 'alert', 'list', 'card') to get the exact Tailwind structural JSON for the widget internals.
+- Define strict TypeScript interfaces for your mock data.
+- Enforce standard React architecture: use \`useState\` and \`useEffect\` to simulate realistic data lifecycles or loading states. Use \`useMemo\` for expensive data derivations.
+- Decouple smaller UI elements into sub-components within the same file to keep the main component clean.
+- CRITICAL: Use the following structural Tailwind JSON guidelines to build your widget internals:
+  - Table: \`{ table: "w-full border-collapse text-sm", thead: "border-b border-white/10 text-slate-400 bg-slate-900/50", th: "px-4 py-3 font-medium", tbody: "divide-y divide-white/5", tr: "transition-colors hover:bg-slate-800/30", td: "px-4 py-3 text-slate-200" }\`
+  - KPI Grid: \`{ container: "grid grid-cols-2 md:grid-cols-3 gap-4", card: "flex flex-col items-center justify-center rounded-xl bg-slate-800/50 p-4 border border-white/5", label: "text-xs font-medium text-slate-400 uppercase", value: "mt-2 text-2xl font-bold text-[rgb(var(--accent))]" }\`
+  - Alerts: \`{ itemContainer: "flex items-start gap-3 rounded-lg border p-3", critical: "border-rose-500/50 bg-rose-500/10 text-rose-100", title: "text-sm font-semibold" }\`
 - You MUST wrap the entire component in this exact CardShell markup for visual consistency:
   <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-[rgb(var(--border)/0.14)] bg-[rgb(var(--surface)/0.55)] p-5 shadow-lg shadow-black/30">
     <div className="mb-4 border-b border-white/5 pb-3">
@@ -81,18 +87,18 @@ REQUIREMENTS:
       {/* Apply the structure retrieved from get_design_system_template here */}
     </div>
   </div>
+- VISUALS: Use \`lucide-react\` for icons (e.g., \`import { Ship, Activity } from 'lucide-react'\`).
+- VISUALS: Use \`recharts\` for data visualization (trends, metrics). Always wrap Recharts in \`<div className="w-full mt-4"><ResponsiveContainer width="100%" height={200}>...</ResponsiveContainer></div>\`.
+- COLORS: NEVER hardcode hex colors. Use CSS variables: \`rgb(var(--accent))\` for chart strokes/primary text, \`rgb(var(--surface))\` for backgrounds. In JSX props, MUST use quotes: \`stroke="rgb(var(--accent))"\` NOT \`stroke={rgb(var(--accent))}\`.
 - Use beautiful modern UI techniques: glassmorphism (bg-opacity/backdrop-blur), rounded-lg containers, subtle borders (border-white/5), and gradients.
 - Typography: Use font-semibold for values, text-sm text-slate-400 for labels.
-- Tables: Use border-collapse, subtle borders between rows, text-left, text-sm.
-- CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data (vessel name, coordinates, percentages, crew names) directly inside the component using variables or state. Do not use \`({ data })\` or expect data from a parent.
-- Accessible: semantic HTML, aria-labels on interactive elements.
+- CRITICAL: The component MUST NOT require any external props. You must hardcode realistic sample data.
 - Export as default export named function matching the widget.
-- Self-contained: only import React from 'react'.
+- Self-contained: you may only import from 'react', 'lucide-react', and 'recharts'.
 
 FORBIDDEN:
 - No markdown code fences in output.
 - No explanation text before or after code.
-- No external UI libraries.
 - No placeholder comments like "// add logic here".`;
 }
 

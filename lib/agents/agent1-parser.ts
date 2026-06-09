@@ -1,4 +1,6 @@
 import { groq } from '../anthropic';
+import { getGeminiClient } from '../gemini';
+import { LLMProvider, LLM_CONFIG } from '../config/llm-config';
 import { mapWidgets, normalizeWidgetList, ALL_MARITIME_WIDGETS } from '../tools/widget-mapper';
 import {
   buildAgent1SystemPrompt,
@@ -6,17 +8,18 @@ import {
   type PromptRecord,
 } from '../prompts/maritime-prompts';
 
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5): Promise<T> {
   let attempt = 0;
   while (attempt < maxRetries) {
     try {
       return await fn();
     } catch (err: any) {
-      const isRateLimit = err.status === 429 || (err.message && (err.message.includes('429') || err.message.includes('Rate limit')));
-      if (isRateLimit && attempt < maxRetries - 1) {
+      const isRetryable = err.status === 429 || err.status === 503 || (err.message && (err.message.includes('429') || err.message.includes('503') || err.message.includes('Rate limit') || err.message.includes('high demand') || err.message.includes('quota')));
+      if (isRetryable && attempt < maxRetries - 1) {
         attempt++;
-        console.warn(`Rate limited (429) Agent 1. Retrying in ${attempt * 5} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 5000));
+        const waitTime = attempt * 15000;
+        console.warn(`API Busy (429/503) Agent 1. Retrying in ${waitTime/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
       throw err;
@@ -43,23 +46,40 @@ export interface Agent1Result {
   prompts: PromptRecord[];
 }
 
-export async function runAgent1(prd: string): Promise<Agent1Result> {
+export async function runAgent1(prd: string, provider: LLMProvider = 'groq'): Promise<Agent1Result> {
   const detectedWidgets = mapWidgets(prd);
 
   const systemPrompt = buildAgent1SystemPrompt();
   const userPrompt = buildAgent1UserPrompt(prd, detectedWidgets);
 
-  const response = await withRetry(() => groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    temperature: 0.1,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-  }));
+  let clean = '';
 
-  const raw = response.choices[0]?.message?.content || '';
-  const clean = raw.replace(/```json|```/g, '').trim();
+  if (provider === 'gemini') {
+    const gemini = getGeminiClient();
+    const response = await withRetry(() => gemini.models.generateContent({
+      model: LLM_CONFIG.gemini.model,
+      contents: [
+        { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        temperature: 0.1,
+      }
+    }));
+    clean = response.text || '';
+  } else {
+    const response = await withRetry(() => groq.chat.completions.create({
+      model: LLM_CONFIG.groq.model,
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }));
+
+    const raw = response.choices[0]?.message?.content || '';
+    clean = raw.replace(/```json|```/g, '').trim();
+  }
 
   const parsed = JSON.parse(clean) as ParsedSchema;
   

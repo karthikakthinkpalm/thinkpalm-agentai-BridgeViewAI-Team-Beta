@@ -14,6 +14,7 @@ import { asWidgetArray } from '@/lib/tools/widget-mapper';
 import { DEFAULT_PRD_SAMPLE } from '@/lib/input/prd-samples';
 import type { HierarchyNode } from '@/lib/preview/hierarchy';
 import type { PromptRecord } from '@/lib/prompts/maritime-prompts';
+import { type LLMProvider } from '@/lib/config/llm-config';
 
 const DEFAULT_PRD = DEFAULT_PRD_SAMPLE.body;
 
@@ -36,9 +37,12 @@ export default function Home() {
   } = useMemory();
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [llmProvider, setLlmProvider] = useState<LLMProvider>('groq');
   const [selectedWidget, setSelectedWidget] = useState('');
   const [centerTab, setCenterTab] = useState<CenterTab>('hierarchy');
   const [theme, setTheme] = useState<ThemeId>('ocean');
+  const [layoutStrategy, setLayoutStrategy] = useState<any>(null);
+  const [auditReport, setAuditReport] = useState<any>(null);
 
   useEffect(() => {
     loadHistory().then(setHistory);
@@ -85,7 +89,7 @@ export default function Home() {
       const res = await fetch('/api/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prd: prdText }),
+        body: JSON.stringify({ prd: prdText, provider: llmProvider }),
       });
 
       const data = await res.json();
@@ -97,6 +101,8 @@ export default function Home() {
       }
 
       setSchema(data.schema);
+      setLayoutStrategy(data.layoutStrategy);
+      setAuditReport(data.auditReport);
       setWidgetsFound(data.tree.length);
       setPrompts(data.prompts as PromptRecord[]);
       setHierarchy(data.hierarchy as HierarchyNode);
@@ -105,12 +111,15 @@ export default function Home() {
       addLog('AGENT 1', `Proposed ${asWidgetArray(data.schema?.widgets).length} widgets in hierarchy`);
       addLog('AGENT 1', `Detected: ${(data.detectedWidgets as string[]).join(', ')}`);
       addLog('AGENT 1', `${(data.prompts as PromptRecord[]).filter((p) => p.agent === 'AGENT 1').length} prompts logged`);
+      addLog('AGENT 1.5', `Generated layout strategy (Theme: ${data.layoutStrategy?.theme})`);
       addLog('AGENT 2', 'Generating production React components...');
 
       for (const name of data.tree) {
         addComponent(name, data.components[name]);
         addLog('AGENT 2', `Exported ${name}.tsx`);
       }
+
+      addLog('AGENT 3', `Audited dashboard. Score: ${data.auditReport?.score}/100`);
 
       addLog('PREVIEW', 'Live dashboard preview ready');
       addLog('EXPORT', 'Use Copy / Download to export production code');
@@ -235,7 +244,7 @@ export default function Home() {
       <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[minmax(280px,0.85fr)_minmax(340px,1fr)_minmax(320px,1fr)_minmax(300px,0.9fr)] xl:overflow-hidden">
 
         {/* LEFT — Spec input */}
-        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden xl:min-h-0">
+        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-y-auto xl:min-h-0">
           <div className="border-b border-white/10 p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Product Spec</p>
@@ -251,6 +260,20 @@ export default function Home() {
               disabled={status === 'running'}
               onSelect={(body) => setPrd(body)}
             />
+            
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-700/80 bg-slate-900/50 px-3 py-2">
+              <label className="text-xs font-semibold text-slate-300">AI Engine</label>
+              <select
+                value={llmProvider}
+                onChange={(e) => setLlmProvider(e.target.value as LLMProvider)}
+                disabled={status === 'running'}
+                className="rounded bg-slate-950/80 px-2 py-1 text-xs font-medium text-slate-200 outline-none ring-1 ring-slate-700 focus:ring-teal-500/50 disabled:opacity-50"
+              >
+                <option value="groq">Groq (Llama 3)</option>
+                <option value="gemini">Gemini (1.5 Pro)</option>
+              </select>
+            </div>
+
             <button
               onClick={runPipeline}
               disabled={status === 'running' || !prdText.trim()}
@@ -279,7 +302,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
+          <div className="p-4">
             <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Agent Log</p>
             <div className="space-y-2">
               {agentLog.length === 0 && (
@@ -363,11 +386,33 @@ export default function Home() {
               />
             )}
             {centerTab === 'preview' && (
-              <DashboardPreview
-                widgets={visiblePreviewWidgets}
-                prd={prdText}
-                schema={schemaObj}
-              />
+              <div className="flex flex-col gap-4 h-full">
+                {auditReport && (
+                  <div className="bg-slate-900/80 border border-slate-700/50 p-4 rounded-xl shadow-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-emerald-400">Agent 3: QA Audit Report</h3>
+                      <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded text-xs font-bold border border-emerald-500/30">Score: {auditReport.score}/100</span>
+                    </div>
+                    <div className="text-xs text-slate-300 space-y-1 mb-3">
+                      <p><span className="text-slate-500">Compliance:</span> {auditReport.compliance}</p>
+                      <p><span className="text-slate-500">Accessibility:</span> {auditReport.accessibility}</p>
+                    </div>
+                    {auditReport.suggestions?.length > 0 && (
+                      <ul className="text-xs text-amber-200/80 list-disc list-inside space-y-0.5">
+                        {auditReport.suggestions.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )}
+                <div className="flex-1 overflow-auto">
+                  <DashboardPreview
+                    widgets={visiblePreviewWidgets}
+                    prd={prdText}
+                    schema={schemaObj}
+                    layoutStrategy={layoutStrategy}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </section>

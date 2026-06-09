@@ -5,6 +5,8 @@ import React from 'react';
 import { LiveProvider, LiveError, LivePreview } from 'react-live';
 import { PreviewProvider, usePreviewData } from './preview-context';
 import { useMemory } from '@/lib/memory/session';
+import * as Recharts from 'recharts';
+import * as Lucide from 'lucide-react';
 
 function CardShell({
   title,
@@ -283,7 +285,7 @@ export function DynamicWidgetPreview({ widgetName, code }: { widgetName: string,
 
   return (
     <CardShell title={widgetName} subtitle="Live Generated Code">
-      <LiveProvider code={transformedCode} scope={{ React, ...React, exports: {}, module: { exports: {} } }} noInline={true} language="tsx">
+      <LiveProvider code={transformedCode} scope={{ React, ...React, ...Recharts, ...Lucide, exports: {}, module: { exports: {} }, get_design_system_template: () => ({}) }} noInline={true} language="tsx">
         <div className="rounded-xl border border-slate-700/50 bg-slate-900 p-4">
           <SafeErrorBoundary>
             <LivePreview />
@@ -307,7 +309,7 @@ export function WidgetPreview({ widgetName }: { widgetName: string }) {
   return <Preview />;
 }
 
-function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
+function DashboardPreviewInner({ widgets, layoutStrategy }: { widgets: string[], layoutStrategy?: any }) {
   const d = usePreviewData();
   const { components } = useMemory();
 
@@ -325,6 +327,9 @@ function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
     openStackBlitz(components, widgets);
   };
 
+  const isGrid = !!layoutStrategy;
+  const containerClass = isGrid ? "grid grid-cols-1 md:grid-cols-4 gap-5" : "flex flex-col gap-5";
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
@@ -341,11 +346,16 @@ function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
           Open in StackBlitz
         </button>
       </div>
-      {widgets.map((w) => (
-        <div key={w} className="animate-fade-in w-full">
-          <WidgetPreview widgetName={w} />
-        </div>
-      ))}
+      <div className={containerClass}>
+        {widgets.map((w) => {
+          const spanClass = isGrid ? (layoutStrategy.gridSpans[w] || 'md:col-span-1 md:row-span-1') : 'w-full';
+          return (
+            <div key={w} className={`animate-fade-in ${spanClass}`}>
+              <WidgetPreview widgetName={w} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -354,14 +364,16 @@ export function DashboardPreview({
   widgets,
   prd,
   schema,
+  layoutStrategy,
 }: {
   widgets: string[];
   prd: string;
   schema?: { domain?: string; layout?: string; priority?: string; widgets?: string[] } | null;
+  layoutStrategy?: any;
 }) {
   return (
     <PreviewProvider prd={prd} schema={schema}>
-      <DashboardPreviewInner widgets={widgets} />
+      <DashboardPreviewInner widgets={widgets} layoutStrategy={layoutStrategy} />
     </PreviewProvider>
   );
 }

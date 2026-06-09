@@ -1,4 +1,6 @@
 import { groq } from '../anthropic';
+import { getGeminiClient } from '../gemini';
+import { LLMProvider, LLM_CONFIG } from '../config/llm-config';
 import { checkExists, registerComponent } from '../tools/registry';
 import { ParsedSchema } from './agent1-parser';
 import {
@@ -8,17 +10,18 @@ import {
 } from '../prompts/maritime-prompts';
 import { getDesignSystemTemplate } from '../tools/widget-design-system';
 
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5): Promise<T> {
   let attempt = 0;
   while (attempt < maxRetries) {
     try {
       return await fn();
     } catch (err: any) {
-      const isRateLimit = err.status === 429 || (err.message && (err.message.includes('429') || err.message.includes('Rate limit')));
-      if (isRateLimit && attempt < maxRetries - 1) {
+      const isRetryable = err.status === 429 || err.status === 503 || (err.message && (err.message.includes('429') || err.message.includes('503') || err.message.includes('Rate limit') || err.message.includes('high demand') || err.message.includes('quota')));
+      if (isRetryable && attempt < maxRetries - 1) {
         attempt++;
-        console.warn(`Rate limited (429). Retrying in ${attempt * 5} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 5000));
+        const waitTime = attempt * 15000;
+        console.warn(`API Busy (429/503) Agent 2. Retrying in ${waitTime/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
       throw err;
@@ -32,7 +35,7 @@ export interface Agent2Result {
   prompts: PromptRecord[];
 }
 
-export async function runAgent2(schema: ParsedSchema): Promise<Agent2Result> {
+export async function runAgent2(schema: ParsedSchema, provider: LLMProvider = 'groq'): Promise<Agent2Result> {
   const generated: Record<string, string> = {};
   const prompts: PromptRecord[] = [];
   const systemPrompt = buildAgent2SystemPrompt();
@@ -73,72 +76,31 @@ export async function runAgent2(schema: ParsedSchema): Promise<Agent2Result> {
       { role: 'user', content: userPrompt },
     ];
 
-    const tools = [
-      {
-        type: 'function',
-        function: {
-          name: 'get_design_system_template',
-          description: 'Get structural JSON exemplars and Tailwind class guidelines for a specific widget archetype.',
-          parameters: {
-            type: 'object',
-            properties: {
-              widgetType: {
-                type: 'string',
-                enum: ['table', 'kpi', 'alert', 'card', 'list'],
-                description: 'The archetype of the widget to get structural design rules for.'
-              }
-            },
-            required: ['widgetType']
-          }
+    let code = '';
+
+    if (provider === 'gemini') {
+      const gemini = getGeminiClient();
+      let response = await withRetry(() => gemini.models.generateContent({
+        model: LLM_CONFIG.gemini.model,
+        contents: [
+          { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
+        ],
+        config: {
+          temperature: 0.7,
         }
-      }
-    ];
+      }));
 
-    let response = await withRetry(() => groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-      messages,
-      tools,
-      tool_choice: 'auto'
-    }));
+      code = response.text || '';
 
-    const responseMessage = response.choices[0]?.message;
-
-    if (responseMessage?.tool_calls) {
-      messages.push(responseMessage);
-      
-      for (const toolCall of responseMessage.tool_calls) {
-        if (toolCall.function.name === 'get_design_system_template') {
-          const args = JSON.parse(toolCall.function.arguments);
-          const toolResult = getDesignSystemTemplate(args.widgetType);
-          
-          prompts.push({
-            id: `a2-tool-${widget.name}-${toolCall.id}`,
-            agent: 'AGENT 2',
-            role: 'system',
-            label: `Tool Call — get_design_system_template('${args.widgetType}')`,
-            content: toolResult,
-            techniques: ['Tool execution', 'Structured JSON output'],
-          });
-
-          messages.push({
-            tool_call_id: toolCall.id,
-            role: 'tool',
-            name: toolCall.function.name,
-            content: toolResult,
-          });
-        }
-      }
-
-      // Second call to get final component code
-      response = await withRetry(() => groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+    } else {
+      let response = await withRetry(() => groq.chat.completions.create({
+        model: LLM_CONFIG.groq.model,
         temperature: 0.7,
         messages,
       }));
-    }
 
-    const code = response.choices[0]?.message?.content || '';
+      code = response.choices[0]?.message?.content || '';
+    }
     const clean = code.replace(/```(?:typescript|tsx|ts|jsx)?|```/g, '').trim();
 
     registerComponent(widget.name, clean);
