@@ -11,6 +11,12 @@ import { PrdSamplePicker } from '@/components/prd-sample-picker';
 import { DashboardPreview } from '@/lib/preview/widget-previews';
 import { parsePrdForPreview } from '@/lib/preview/parse-prd';
 import { asWidgetArray } from '@/lib/tools/widget-mapper';
+import { dedupePreviewWidgets } from '@/lib/preview/curated-widgets';
+import { recommendVisualizations } from '@/lib/tools/visualization-recommender';
+import { VizRecommendationsPanel } from '@/components/viz-recommendations-panel';
+import { FeatureDiscoveryPanel } from '@/components/feature-discovery-panel';
+import { runFeatureDiscovery } from '@/lib/tools/feature-discovery';
+import type { FeatureDiscoveryResult } from '@/lib/types/feature-discovery';
 import { DEFAULT_PRD_SAMPLE } from '@/lib/input/prd-samples';
 import type { HierarchyNode } from '@/lib/preview/hierarchy';
 import type { PromptRecord } from '@/lib/prompts/maritime-prompts';
@@ -24,20 +30,21 @@ type SchemaSummary = {
   widgets?: string[];
 };
 
-type CenterTab = 'hierarchy' | 'prompts' | 'studio' | 'preview';
+type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview';
 type ThemeId = 'ocean' | 'harbor';
 
 export default function Home() {
   const {
     prdText, schema, components, agentLog,
-    status, widgetsFound, prompts, hierarchy, previewWidgets, hiddenWidgets,
+    status, widgetsFound, prompts, hierarchy, previewWidgets, hiddenWidgets, visualizations,
     setPrd, setSchema, setStatus, addComponent,
-    addLog, setWidgetsFound, setPrompts, setHierarchy, setPreviewWidgets, setHiddenWidgets, reset,
+    addLog, setWidgetsFound, setPrompts, setHierarchy, setPreviewWidgets, setHiddenWidgets,
+    setVisualizations, featureDiscovery, setFeatureDiscovery, reset,
   } = useMemory();
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedWidget, setSelectedWidget] = useState('');
-  const [centerTab, setCenterTab] = useState<CenterTab>('hierarchy');
+  const [centerTab, setCenterTab] = useState<CenterTab>('preview');
   const [theme, setTheme] = useState<ThemeId>('ocean');
 
   useEffect(() => {
@@ -62,6 +69,22 @@ export default function Home() {
     [prdText, schemaObj]
   );
 
+  const liveVizAnalysis = useMemo(
+    () => recommendVisualizations(prdText),
+    [prdText]
+  );
+
+  const liveFeatureDiscovery = useMemo(
+    () => runFeatureDiscovery(prdText),
+    [prdText]
+  );
+
+  const displayVisualizations =
+    visualizations.length > 0 ? visualizations : liveVizAnalysis.recommendations;
+
+  const displayFeatureDiscovery: FeatureDiscoveryResult | null =
+    featureDiscovery ?? liveFeatureDiscovery;
+
   // Keep widget list in sync with PRD keywords (live preview)
   useEffect(() => {
     const detected = parsePrdForPreview(prdText).widgets;
@@ -76,10 +99,10 @@ export default function Home() {
     if (!prdText.trim()) return;
     reset();
     setStatus('running');
-    setCenterTab('hierarchy');
+    setCenterTab('memory');
 
-    addLog('SYSTEM', 'Pipeline started');
-    addLog('AGENT 1', 'Reading spec — applying prompt engineering...');
+    addLog('SYSTEM', '7-agent pipeline started');
+    addLog('AGENT 1', 'Requirement Analyzer — extracting entities and metrics...');
 
     try {
       const res = await fetch('/api/pipeline', {
@@ -92,6 +115,7 @@ export default function Home() {
 
       if (data.error) {
         addLog('SYSTEM', `Error: ${data.error}`);
+        if (data.detail) addLog('SYSTEM', String(data.detail));
         setStatus('error');
         return;
       }
@@ -100,16 +124,25 @@ export default function Home() {
       setWidgetsFound(data.tree.length);
       setPrompts(data.prompts as PromptRecord[]);
       setHierarchy(data.hierarchy as HierarchyNode);
+      if (data.visualizationAnalysis?.recommendations) {
+        setVisualizations(data.visualizationAnalysis.recommendations);
+      }
+      if (data.featureDiscovery) {
+        setFeatureDiscovery(data.featureDiscovery);
+      }
       setPreviewWidgets(asWidgetArray(data.schema?.widgets, asWidgetArray(data.tree)));
 
-      addLog('AGENT 1', `Proposed ${asWidgetArray(data.schema?.widgets).length} widgets in hierarchy`);
-      addLog('AGENT 1', `Detected: ${(data.detectedWidgets as string[]).join(', ')}`);
-      addLog('AGENT 1', `${(data.prompts as PromptRecord[]).filter((p) => p.agent === 'AGENT 1').length} prompts logged`);
-      addLog('AGENT 2', 'Generating production React components...');
+      const trace = (data.agentTrace as { agent: string; status: string; detail: string }[]) ?? [];
+      for (const step of trace) {
+        addLog(step.agent, step.detail ?? step.status ?? 'completed');
+      }
+
+      for (const warning of (data.warnings as string[] | undefined) ?? []) {
+        addLog('SYSTEM', warning);
+      }
 
       for (const name of data.tree) {
         addComponent(name, data.components[name]);
-        addLog('AGENT 2', `Exported ${name}.tsx`);
       }
 
       addLog('PREVIEW', 'Live dashboard preview ready');
@@ -148,8 +181,8 @@ export default function Home() {
     'border-slate-600/60 bg-slate-900/70 text-slate-300';
 
   const centerTabs: { id: CenterTab; label: string }[] = [
-    { id: 'hierarchy', label: 'Widget Hierarchy' },
-    { id: 'prompts', label: 'Prompt Engineering' },
+    { id: 'memory', label: 'Memory' },
+    { id: 'prompts', label: 'Prompts' },
     { id: 'studio', label: 'Studio' },
     { id: 'preview', label: 'Live Preview' },
   ];
@@ -160,7 +193,7 @@ export default function Home() {
     const safeHidden = asWidgetArray(hiddenWidgets);
     const ordered = safePreview.filter((w) => detected.has(w));
     const list = ordered.length > 0 ? ordered : parsedPreview.widgets;
-    return list.filter((w) => !safeHidden.includes(w));
+    return dedupePreviewWidgets(list.filter((w) => !safeHidden.includes(w)));
   }, [parsedPreview.widgets, previewWidgets, hiddenWidgets]);
 
   return (
@@ -221,8 +254,8 @@ export default function Home() {
               Theme: {theme}
             </span>
 
-            <span className="chip px-3 py-1.5 text-[0.65rem] font-medium text-slate-200">Agent 1: Spec + Hierarchy</span>
-            <span className="chip px-3 py-1.5 text-[0.65rem] font-medium text-slate-200">Agent 2: Code Export</span>
+            <span className="chip px-3 py-1.5 text-[0.65rem] font-medium text-slate-200">7-Agent Pipeline</span>
+            <span className="chip px-3 py-1.5 text-[0.65rem] font-medium text-slate-200">Analyze → Classify → Generate</span>
             <span className="chip px-3 py-1.5 text-[0.65rem] font-medium text-slate-200">Live Preview</span>
             <span className={`rounded-full border px-3 py-1.5 ${statusTone}`}>
               <span className={`mr-2 inline-block h-2 w-2 rounded-full ${status === 'running' ? 'animate-ping bg-amber-300' : 'bg-current'}`} />
@@ -261,24 +294,6 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="border-b border-white/10 p-4">
-            <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">◈ Memory</p>
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="metric-card">
-                <div className="text-purple-300">STATUS</div>
-                <div className="mt-1 text-slate-100">{status}</div>
-              </div>
-              <div className="metric-card">
-                <div className="text-purple-300">WIDGETS</div>
-                <div className="mt-1 text-slate-100">{widgetsFound || '—'}</div>
-              </div>
-              <div className="metric-card col-span-2">
-                <div className="text-purple-300">DOMAIN / LAYOUT</div>
-                <div className="mt-1 truncate text-slate-100">{schemaDomain} · {schemaLayout}</div>
-              </div>
-            </div>
-          </div>
-
           <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
             <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Agent Log</p>
             <div className="space-y-2">
@@ -293,6 +308,15 @@ export default function Home() {
                   <span className={
                     log.agent === 'AGENT 1' ? 'text-teal-400' :
                     log.agent === 'AGENT 2' ? 'text-blue-400' :
+                    log.agent === 'AGENT 3' ? 'text-violet-400' :
+                    log.agent === 'AGENT 4' ? 'text-indigo-400' :
+                    log.agent === 'AGENT 5' ? 'text-cyan-400' :
+                    log.agent === 'AGENT 6' ? 'text-emerald-400' :
+                    log.agent === 'AGENT 7' ? 'text-orange-400' :
+                    log.agent === 'BRIDGEVIEW' ? 'text-pink-400' :
+                    log.agent === 'ADAPTIVE PLAN' ? 'text-fuchsia-400' :
+                    log.agent === 'TOOL PROVISIONER' ? 'text-lime-400' :
+                    log.agent.includes('SKIPPED') || (log.message?.toLowerCase().includes('skipped') ?? false) ? 'text-slate-500' :
                     log.agent === 'PREVIEW' ? 'text-cyan-400' :
                     log.agent === 'EXPORT' ? 'text-amber-400' :
                     log.agent === 'MEMORY' ? 'text-purple-400' :
@@ -307,15 +331,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CENTER — Hierarchy / Prompts / Preview */}
-        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-150 xl:min-h-0 xl:col-span-1">
+        {/* CENTER — Memory / Prompts / Studio / Live Preview */}
+        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-150 xl:min-h-0">
           <div className="flex border-b border-white/10">
             {centerTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setCenterTab(tab.id)}
-                className={`flex-1 px-3 py-3 font-mono text-[0.65rem] uppercase tracking-wider transition ${
+                className={`flex-1 px-2 py-3 font-mono text-[0.65rem] uppercase tracking-wider transition ${
                   centerTab === tab.id
                     ? 'border-b-2 border-teal-400 bg-teal-400/10 text-teal-200'
                     : 'text-slate-500 hover:bg-slate-900/50 hover:text-slate-300'
@@ -327,10 +351,24 @@ export default function Home() {
           </div>
 
           <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
-            {centerTab === 'hierarchy' && (
+            {centerTab === 'memory' && (
               <>
+                <div className="mb-4 grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="metric-card">
+                    <div className="text-purple-300">STATUS</div>
+                    <div className="mt-1 text-slate-100">{status}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="text-purple-300">WIDGETS</div>
+                    <div className="mt-1 text-slate-100">{widgetsFound || visiblePreviewWidgets.length || '—'}</div>
+                  </div>
+                  <div className="metric-card col-span-2">
+                    <div className="text-purple-300">DOMAIN / LAYOUT</div>
+                    <div className="mt-1 truncate text-slate-100">{schemaDomain} · {schemaLayout}</div>
+                  </div>
+                </div>
                 <p className="mb-3 font-mono text-xs text-slate-500">
-                  Agent 1 proposes this component tree from your spec.
+                  Agents 1–4 propose this component tree; Agents 5–7 validate generated code.
                 </p>
                 <HierarchyTree
                   hierarchy={hierarchy}
@@ -340,6 +378,18 @@ export default function Home() {
                     setCenterTab('preview');
                   }}
                 />
+                <div className="mt-6 border-t border-white/10 pt-4">
+                  <p className="mb-3 font-mono text-xs uppercase tracking-wider text-slate-500">
+                    BridgeView — Feature Discovery
+                  </p>
+                  <FeatureDiscoveryPanel discovery={displayFeatureDiscovery} />
+                </div>
+                <div className="mt-6 border-t border-white/10 pt-4">
+                  <p className="mb-3 font-mono text-xs uppercase tracking-wider text-slate-500">
+                    UX Architect — Visualization Analysis
+                  </p>
+                  <VizRecommendationsPanel recommendations={displayVisualizations} />
+                </div>
               </>
             )}
             {centerTab === 'prompts' && <PromptPanel prompts={prompts} />}
@@ -363,11 +413,16 @@ export default function Home() {
               />
             )}
             {centerTab === 'preview' && (
-              <DashboardPreview
-                widgets={visiblePreviewWidgets}
-                prd={prdText}
-                schema={schemaObj}
-              />
+              <>
+                <p className="mb-3 text-xs text-slate-500">
+                  Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
+                </p>
+                <DashboardPreview
+                  widgets={visiblePreviewWidgets}
+                  prd={prdText}
+                  schema={schemaObj}
+                />
+              </>
             )}
           </div>
         </section>

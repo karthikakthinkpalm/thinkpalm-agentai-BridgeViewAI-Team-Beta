@@ -1,10 +1,64 @@
 'use client';
 
 import type { ComponentType, ReactNode } from 'react';
-import React from 'react';
-import { LiveProvider, LiveError, LivePreview } from 'react-live';
 import { PreviewProvider, usePreviewData } from './preview-context';
-import { useMemory } from '@/lib/memory/session';
+import { normalizeWidgetName } from '@/lib/tools/widget-mapper';
+import {
+  dedupePreviewWidgets,
+  pickCuratedPreview,
+  shouldUseCuratedPreview,
+} from './curated-widgets';
+import { FuelGaugeVisual } from './fuel-gauge-visual';
+import { VoyageRouteVisual } from './voyage-route-visual';
+import { CrewStatusVisual } from './crew-status-visual';
+import { AlertTimelineVisual } from './alert-timeline-visual';
+import { EngineGaugeVisual } from './engine-gauge-visual';
+import { SensorStreamVisual } from './sensor-stream-visual';
+import { AISFeedVisual } from './ais-feed-visual';
+import { GPSTrackVisual } from './gps-track-visual';
+
+const WIDGET_LABELS: Record<string, { title: string; subtitle: (d: ReturnType<typeof usePreviewData>) => string }> = {
+  VoyageProgressTracker: {
+    title: 'Voyage Progress',
+    subtitle: (d) => `${d.vesselName} · ${d.legLabel} · ${d.route}`,
+  },
+  FuelGaugeCards: {
+    title: 'Fuel Gauges',
+    subtitle: (d) => `${d.vesselName} · tank levels & burn rates`,
+  },
+  CrewCertificationStatus: {
+    title: 'Crew Certification',
+    subtitle: (d) => `${d.vesselName} · STCW compliance roster`,
+  },
+  AlertPanel: {
+    title: 'Alert Panel',
+    subtitle: (d) => `${d.alerts.length} active alarms · ${d.priority}`,
+  },
+  EngineMonitor: {
+    title: 'Engine Monitor',
+    subtitle: (d) => `${d.vesselName} · main engine parameters`,
+  },
+  SensorStreamPanel: {
+    title: 'Sensor Stream',
+    subtitle: (d) => `${d.vesselName} · SOG trend (24h)`,
+  },
+  AISLiveFeed: {
+    title: 'AIS Live Feed',
+    subtitle: (d) => `${d.vesselName} · position ${d.position}`,
+  },
+  GPSTracker: {
+    title: 'GPS Tracker',
+    subtitle: (d) => `${d.vesselName} · track history`,
+  },
+  KPIDashboard: {
+    title: 'KPI Dashboard',
+    subtitle: (d) => `${d.domain} · fleet performance`,
+  },
+  WeatherWidget: {
+    title: 'Weather',
+    subtitle: (d) => `Route · ${d.route}`,
+  },
+};
 
 function CardShell({
   title,
@@ -26,177 +80,120 @@ function CardShell({
   );
 }
 
-class SafeErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string }> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false, errorMsg: '' };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, errorMsg: error.message };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Widget render error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex items-center justify-center h-full p-4 rounded bg-rose-950/20 border border-rose-500/30">
-          <p className="text-sm text-rose-400 font-mono">Runtime Error: {this.state.errorMsg}</p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-function VoyageProgressTrackerPreview() {
-  const d = usePreviewData();
-  const stats = [
-    { label: 'ETA', value: d.eta },
-    { label: 'Remaining', value: d.remaining },
-    { label: 'Position', value: d.position },
-  ];
-
-  return (
-    <CardShell title="Voyage Progress" subtitle={`${d.vesselName} · ${d.legLabel}`}>
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm text-slate-300">
-          <span>{d.route}</span>
-          <span className="text-base font-bold text-[rgb(var(--accent)/0.95)]">{d.progress}%</span>
-        </div>
-        <div className="h-3 overflow-hidden rounded-full bg-slate-800">
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${d.progress}%`,
-              background: 'linear-gradient(90deg, rgb(var(--accent)), rgb(var(--accent-2)))',
-            }}
-          />
-        </div>
-        <div className="space-y-2">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="flex items-center justify-between gap-4 rounded-lg bg-slate-800/80 px-4 py-2.5 text-sm"
-            >
-              <span className="font-medium text-slate-400">{stat.label}</span>
-              <span className="font-semibold text-slate-100">{stat.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </CardShell>
-  );
-}
-
-function FuelGaugeCardsPreview() {
-  const d = usePreviewData();
-  const colors = [
-    'from-amber-500 to-orange-500',
-    'from-[rgb(var(--accent))] to-[rgb(var(--accent-2))]',
-    'from-blue-500 to-cyan-500',
-  ];
-
-  return (
-    <CardShell title="Fuel Gauges" subtitle={`${d.vesselName} · tank levels`}>
-      <div className="grid grid-cols-3 gap-5">
-        {d.tanks.map((t, i) => (
-          <div
-            key={t.name}
-            className="flex flex-col items-center rounded-xl border border-white/5 bg-slate-950/50 px-3 py-4"
-          >
-            <span className="text-sm font-semibold text-slate-200">{t.name}</span>
-            <span className="mt-1 text-base font-bold text-[rgb(var(--accent)/0.95)]">{t.pct}%</span>
-            <div className="mt-3 flex h-28 w-full max-w-[5rem] items-end overflow-hidden rounded-lg bg-slate-800">
-              <div
-                className={`w-full rounded-b-md bg-gradient-to-t ${colors[i % colors.length]}`}
-                style={{ height: `${t.pct}%` }}
-              />
-            </div>
-            <span className="mt-2 text-sm text-slate-400">{t.rate}</span>
-          </div>
-        ))}
-      </div>
-    </CardShell>
-  );
-}
-
-function CrewCertificationStatusPreview() {
-  const d = usePreviewData();
-  return (
-    <CardShell title="Crew Certification" subtitle={`${d.vesselName} · STCW`}>
-      <ul className="space-y-2">
-        {d.crew.map((c) => (
-          <li
-            key={c.name}
-            className="flex items-center gap-3 rounded-lg border border-white/5 bg-slate-950/50 px-4 py-3 text-sm"
-          >
-            <span
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                c.status === 'valid' ? 'bg-emerald-400' : 'bg-amber-400'
-              }`}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-slate-100">{c.name}</div>
-              <div className="text-slate-400">{c.role}</div>
-            </div>
-            <span
-              className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                c.status === 'valid'
-                  ? 'bg-emerald-400/15 text-emerald-300'
-                  : 'bg-amber-400/15 text-amber-300'
-              }`}
-            >
-              {c.exp}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </CardShell>
-  );
-}
-
-function AlertPanelPreview() {
-  const d = usePreviewData();
-  const tones: Record<string, string> = {
-    critical: 'border-rose-500/50 bg-rose-500/10 text-rose-100',
-    warning: 'border-amber-500/50 bg-amber-500/10 text-amber-100',
-    info: 'border-blue-500/40 bg-blue-500/10 text-blue-100',
+function widgetMeta(widgetName: string, d: ReturnType<typeof usePreviewData>) {
+  const canonical = normalizeWidgetName(widgetName);
+  const meta = WIDGET_LABELS[canonical] ?? {
+    title: widgetName.replace(/([A-Z])/g, ' $1').trim(),
+    subtitle: () => d.vesselName,
   };
+  return { title: meta.title, subtitle: meta.subtitle(d) };
+}
+
+function VoyageProgressTrackerPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
   return (
-    <CardShell title="Alert Panel" subtitle={`${d.alerts.length} active · ${d.priority}`}>
-      <ul className="space-y-2">
-        {d.alerts.map((a) => (
-          <li
-            key={a.msg}
-            className={`rounded-lg border px-4 py-3 text-sm ${tones[a.level]}`}
-          >
-            <div className="flex justify-between gap-2 text-xs font-medium uppercase tracking-wide opacity-80">
-              <span>{a.level}</span>
-              <span>{a.time}</span>
-            </div>
-            <p className="mt-1.5 leading-snug">{a.msg}</p>
-          </li>
-        ))}
-      </ul>
+    <CardShell title={title} subtitle={subtitle}>
+      <VoyageRouteVisual data={d} />
     </CardShell>
   );
 }
 
-function WeatherWidgetPreview() {
+function FuelGaugeCardsPreview({ widgetName }: { widgetName: string }) {
   const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  const hfoMdo = d.tanks.filter((t) => t.name === 'HFO' || t.name === 'MDO');
+  const tanks = hfoMdo.length >= 2 ? hfoMdo : d.tanks;
   return (
-    <CardShell title="Weather" subtitle={`Route · ${d.route}`}>
+    <CardShell title={title} subtitle={subtitle}>
+      <FuelGaugeVisual tanks={tanks} vesselName={d.vesselName} />
+    </CardShell>
+  );
+}
+
+function CrewCertificationStatusPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  return (
+    <CardShell title={title} subtitle={subtitle}>
+      <CrewStatusVisual crew={d.crew} vesselName={d.vesselName} />
+    </CardShell>
+  );
+}
+
+function AlertPanelPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  const operationalAlerts = d.alerts.filter(
+    (a) => !/crew|cert|stcw/i.test(a.msg) && !/machinery|engine/i.test(a.msg)
+  );
+  return (
+    <CardShell title={title} subtitle={subtitle}>
+      <AlertTimelineVisual alerts={operationalAlerts.length > 0 ? operationalAlerts : d.alerts} priority={d.priority} />
+    </CardShell>
+  );
+}
+
+function EngineMonitorPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  return (
+    <CardShell title={title} subtitle={subtitle}>
+      <EngineGaugeVisual rpm={d.engine.rpm} load={d.engine.load} health={d.engine.health} vesselName={d.vesselName} />
+    </CardShell>
+  );
+}
+
+function AISLiveFeedPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  const sog = `${12 + (d.progress % 8)} kn`;
+  return (
+    <CardShell title={title} subtitle={subtitle}>
+      <AISFeedVisual vesselName={d.vesselName} position={d.position} sog={sog} cog="084°" />
+    </CardShell>
+  );
+}
+
+function GPSTrackerPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  const crumbs = ['1.2°N 103.4°E', '2.8°N 104.1°E', '3.3°N 104.8°E', `${d.position} 105.2°E`];
+  return (
+    <CardShell title={title} subtitle={subtitle}>
+      <GPSTrackVisual vesselName={d.vesselName} route={d.route} breadcrumbs={crumbs} />
+    </CardShell>
+  );
+}
+
+function SensorStreamPanelPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  return (
+    <CardShell title={title} subtitle={subtitle}>
+      <SensorStreamVisual
+        vesselName={d.vesselName}
+        metric="Speed over ground"
+        unit="kn"
+        values={d.speedSeries}
+      />
+    </CardShell>
+  );
+}
+
+function WeatherWidgetPreview({ widgetName }: { widgetName: string }) {
+  const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
+  return (
+    <CardShell title={title} subtitle={subtitle}>
       <div className="grid grid-cols-3 gap-3 text-center">
         {[
-          { label: 'Wind', value: d.weather.wind },
-          { label: 'Waves', value: d.weather.waves },
-          { label: 'Swell', value: d.weather.swell },
+          { label: 'Wind', value: d.weather.wind, icon: '💨' },
+          { label: 'Waves', value: d.weather.waves, icon: '🌊' },
+          { label: 'Swell', value: d.weather.swell, icon: '〰' },
         ].map((w) => (
-          <div key={w.label} className="rounded-lg bg-slate-800/80 px-3 py-4">
+          <div key={w.label} className="rounded-xl border border-white/5 bg-slate-950/50 px-3 py-4">
+            <p className="text-lg">{w.icon}</p>
             <p className="text-xs text-slate-500">{w.label}</p>
             <p className="mt-1 text-base font-semibold text-slate-100">{w.value}</p>
           </div>
@@ -206,38 +203,16 @@ function WeatherWidgetPreview() {
   );
 }
 
-function EngineMonitorPreview() {
+function KPIDashboardPreview({ widgetName }: { widgetName: string }) {
   const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(widgetName, d);
   return (
-    <CardShell title="Engine Monitor" subtitle={d.vesselName}>
-      <div className="space-y-3">
-        {[
-          { label: 'RPM', value: d.engine.rpm },
-          { label: 'Load', value: d.engine.load },
-          { label: 'Health', value: d.engine.health },
-        ].map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between rounded-lg bg-slate-800/80 px-4 py-3 text-sm"
-          >
-            <span className="text-slate-400">{row.label}</span>
-            <span className="font-semibold text-slate-100">{row.value}</span>
-          </div>
-        ))}
-      </div>
-    </CardShell>
-  );
-}
-
-function KPIDashboardPreview() {
-  const d = usePreviewData();
-  return (
-    <CardShell title="KPI Dashboard" subtitle={d.domain}>
+    <CardShell title={title} subtitle={subtitle}>
       <div className="grid grid-cols-3 gap-3">
         {d.kpis.map((k) => (
-          <div key={k.label} className="rounded-lg bg-slate-800/80 px-3 py-4 text-center">
+          <div key={k.label} className="rounded-xl border border-white/5 bg-slate-950/50 px-3 py-4 text-center">
             <p className="text-xs text-slate-500">{k.label}</p>
-            <p className="mt-1 text-xl font-bold text-[rgb(var(--accent)/0.95)]">{k.value}</p>
+            <p className="mt-1 text-2xl font-bold text-[rgb(var(--accent)/0.95)]">{k.value}</p>
           </div>
         ))}
       </div>
@@ -247,71 +222,53 @@ function KPIDashboardPreview() {
 
 function GenericWidgetPreview({ name }: { name: string }) {
   const d = usePreviewData();
+  const { title, subtitle } = widgetMeta(name, d);
   return (
-    <CardShell title={name} subtitle={d.vesselName}>
+    <CardShell title={title} subtitle={subtitle}>
       <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-700 text-sm text-slate-400">
-        From spec: {d.domain}
+        {d.domain}
       </div>
     </CardShell>
   );
 }
 
-const PREVIEW_MAP: Record<string, ComponentType> = {
+type PreviewProps = { widgetName: string };
+
+const PREVIEW_MAP: Record<string, ComponentType<PreviewProps>> = {
   VoyageProgressTracker: VoyageProgressTrackerPreview,
   VoyageTracker: VoyageProgressTrackerPreview,
+  AISLiveFeed: AISLiveFeedPreview,
+  GPSTracker: GPSTrackerPreview,
   FuelGaugeCards: FuelGaugeCardsPreview,
   FuelAnalytics: FuelGaugeCardsPreview,
   CrewCertificationStatus: CrewCertificationStatusPreview,
   CrewPanel: CrewCertificationStatusPreview,
   AlertPanel: AlertPanelPreview,
   AlertCenter: AlertPanelPreview,
-  WeatherWidget: WeatherWidgetPreview,
   EngineMonitor: EngineMonitorPreview,
+  SensorStreamPanel: SensorStreamPanelPreview,
   KPIDashboard: KPIDashboardPreview,
+  WeatherWidget: WeatherWidgetPreview,
 };
 
-export function DynamicWidgetPreview({ widgetName, code }: { widgetName: string, code: string }) {
-  // react-live doesn't support ES module syntax (import/export) out of the box
-  // We strip imports/exports and manually trigger render
-  let transformedCode = code.replace(/import\s+[\s\S]*?(?:from\s+['"].*?['"]|['"].*?['"]);?/g, '');
-  transformedCode = transformedCode.replace(/export\s+default\s+/g, '');
-  transformedCode = transformedCode.replace(/export\s+/g, '');
-  
-  const match = transformedCode.match(/function\s+([A-Z][a-zA-Z0-9_]*)/);
-  const actualName = match ? match[1] : widgetName;
-  transformedCode += `\nrender(<${actualName} />);`;
-
-  return (
-    <CardShell title={widgetName} subtitle="Live Generated Code">
-      <LiveProvider code={transformedCode} scope={{ React, ...React, exports: {}, module: { exports: {} } }} noInline={true} language="tsx">
-        <div className="rounded-xl border border-slate-700/50 bg-slate-900 p-4">
-          <SafeErrorBoundary>
-            <LivePreview />
-          </SafeErrorBoundary>
-        </div>
-        <LiveError className="mt-2 rounded bg-red-950/50 p-2 text-xs text-red-400" />
-      </LiveProvider>
-    </CardShell>
-  );
-}
-
 export function WidgetPreview({ widgetName }: { widgetName: string }) {
-  const { components } = useMemory();
-  const code = components[widgetName];
-  
-  if (code) {
-    return <DynamicWidgetPreview widgetName={widgetName} code={code} />;
+  const canonical = normalizeWidgetName(widgetName);
+  let Preview: ComponentType<PreviewProps> | null = PREVIEW_MAP[canonical] ?? PREVIEW_MAP[widgetName] ?? null;
+
+  if (!Preview && shouldUseCuratedPreview(widgetName)) {
+    Preview = pickCuratedPreview(widgetName, PREVIEW_MAP);
   }
 
-  const Preview = PREVIEW_MAP[widgetName] ?? (() => <GenericWidgetPreview name={widgetName} />);
-  return <Preview />;
+  if (Preview) return <Preview widgetName={canonical} />;
+
+  return <GenericWidgetPreview name={widgetName} />;
 }
 
 function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
   const d = usePreviewData();
-  const { components } = useMemory();
+  const uniqueWidgets = dedupePreviewWidgets(widgets);
 
-  if (widgets.length === 0) {
+  if (uniqueWidgets.length === 0) {
     return (
       <div className="flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-700/80 bg-slate-950/40 p-8 text-center">
         <p className="text-sm text-slate-400">Add widgets to your spec to see a live preview</p>
@@ -321,27 +278,24 @@ function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
   }
 
   const handleOpenStackBlitz = async () => {
-    const { openStackBlitz } = await import('./stackblitz-builder');
-    openStackBlitz(components, widgets);
+    const { openCuratedStackBlitz } = await import('./stackblitz-builder');
+    openCuratedStackBlitz(d, uniqueWidgets);
   };
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">
-          Live preview from your spec — updates as you edit the PRD
-        </p>
+        <p className="font-mono text-xs uppercase tracking-wider text-slate-500">Live Preview</p>
         <button
           onClick={handleOpenStackBlitz}
-          className="rounded-lg bg-[rgb(var(--accent))] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[rgb(var(--accent-2))] flex items-center gap-2 shadow-lg shadow-black/20"
+          disabled={uniqueWidgets.length === 0}
+          className="rounded-lg bg-[rgb(var(--accent))] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[rgb(var(--accent-2))] disabled:opacity-40"
+          title="Opens the same curated dashboard shown in Live Preview"
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
           Open in StackBlitz
         </button>
       </div>
-      {widgets.map((w) => (
+      {uniqueWidgets.map((w) => (
         <div key={w} className="animate-fade-in w-full">
           <WidgetPreview widgetName={w} />
         </div>

@@ -1,0 +1,53 @@
+{
+  "allWidgets": [
+    "VoyageProgressTracker",
+    "FuelGaugeCards",
+    "CrewCertificationStatus",
+    "AlertPanel",
+    "WeatherWidget",
+    "EngineMonitor",
+    "KPIDashboard"
+  ],
+  "defaultWidgets": [
+    "VoyageProgressTracker",
+    "FuelGaugeCards",
+    "CrewCertificationStatus",
+    "AlertPanel"
+  ],
+  "keywordMap": [
+    {
+      "keywords": ["voyage", "tracking", "ais", "route", "ship", "progress", "leg", "eta"],
+      "widget": "VoyageProgressTracker"
+    },
+    {
+      "keywords": ["fuel", "consumption", "hfo", "mdo", "tank", "gauge", "bunker"],
+      "widget": "FuelGaugeCards"
+    },
+    {
+      "keywords": ["crew", "fatigue", "stcw", "certification", "roster", "officer"],
+      "widget": "CrewCertificationStatus"
+    },
+    {
+      "keywords": ["alert", "emergency", "alarm", "critical", "warning"],
+      "widget": "AlertPanel"
+    },
+    {
+      "keywords": ["weather", "wave", "wind", "swell"],
+      "widget": "WeatherWidget"
+    },
+    {
+      "keywords": ["engine", "rpm", "performance", "machinery"],
+      "widget": "EngineMonitor"
+    },
+    {
+      "keywords": ["kpi", "efficiency", "cii", "performance metric"],
+      "widget": "KPIDashboard"
+    }
+  ],
+  "aliases": {
+    "VoyageTracker": "VoyageProgressTracker",
+    "FuelAnalytics": "FuelGaugeCards",
+    "CrewPanel": "CrewCertificationStatus",
+    "AlertCenter": "AlertPanel"
+  }
+}
