@@ -1,7 +1,11 @@
 import { runOrchestratedPipeline } from '@/lib/orchestration/orchestrator';
 
-export async function runPipeline(prd: string) {
-  return runOrchestratedPipeline(prd);
+export async function runPipeline(
+  prd: string,
+  existingComponents?: Record<string, string>,
+  llmProvider?: 'groq' | 'gemini'
+) {
+  return runOrchestratedPipeline(prd, existingComponents, llmProvider);
 }
 
 // Re-export types for backwards compatibility

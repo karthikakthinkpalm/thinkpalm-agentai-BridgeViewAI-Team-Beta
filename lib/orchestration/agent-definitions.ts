@@ -18,7 +18,7 @@ export function registerPipelineAgents(): void {
     requires: ['prd'],
     produces: ['requirements', 'detectedWidgets'],
     async run(ctx) {
-      const result = await runAgent1RequirementAnalyzer(ctx.prd);
+      const result = await runAgent1RequirementAnalyzer(ctx.prd, ctx.llmProvider);
       ctx.requirements = result.requirements;
       ctx.detectedWidgets = result.detectedWidgets;
       ctx.prompts.push(...result.prompts);
@@ -40,7 +40,7 @@ export function registerPipelineAgents(): void {
       if (!ctx.plan || !ctx.requirements) {
         return { summary: 'Skipped — no plan or requirements', status: 'skipped' };
       }
-      const { added, plan } = await provisionToolsForPrd(ctx.prd, ctx.requirements, ctx.plan);
+      const { added, plan } = await provisionToolsForPrd(ctx.prd, ctx.requirements, ctx.plan, ctx.llmProvider);
       ctx.plan = plan;
       ctx.provisionedTools = [...(ctx.provisionedTools ?? []), ...added];
       const names = added.map((t) => t.id).join(', ') || 'none';
@@ -92,7 +92,7 @@ export function registerPipelineAgents(): void {
     requires: ['prd', 'requirements', 'selectedWidgets'],
     produces: ['enrichedWidgets', 'discovery'],
     async run(ctx) {
-      const result = await runBridgeViewIntelligence(ctx.prd, ctx.requirements!, ctx.selectedWidgets!);
+      const result = await runBridgeViewIntelligence(ctx.prd, ctx.requirements!, ctx.selectedWidgets!, ctx.llmProvider);
       ctx.discovery = result.discovery;
       ctx.enrichedWidgets = result.enrichedWidgets;
       ctx.autoExpandedWidgets = result.autoExpandedWidgets;
@@ -151,7 +151,7 @@ export function registerPipelineAgents(): void {
     requires: ['schema'],
     produces: ['components'],
     async run(ctx) {
-      const result = await runAgent5ReactGenerator(ctx.schema!);
+      const result = await runAgent5ReactGenerator(ctx.schema!, ctx.llmProvider);
       ctx.components = result.components;
       ctx.fallbackWidgets = result.fallbackWidgets;
       ctx.warnings.push(...result.warnings);

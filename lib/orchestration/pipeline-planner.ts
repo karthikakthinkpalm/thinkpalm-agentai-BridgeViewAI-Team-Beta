@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { RequirementAnalysis } from '@/lib/types/pipeline';
 import pipelineCapabilities from '@/config/maritime/pipeline-capabilities.json';
-import { createChatCompletion } from '@/lib/groq-chat';
+import { createChatCompletion } from '@/lib/llm-router';
 import { parseJsonFromLlm } from '@/lib/parse-llm-json';
 import { compilePattern } from '@/lib/tools/config-loader';
 import type { AdaptivePipelinePlan } from './types';
@@ -187,7 +187,7 @@ function buildRationale(
   return `Adaptive plan: ${agents.length} agents, ${tools.length} tools, ${skipped.length} skipped for this PRD profile`;
 }
 
-async function llmRefinePlan(prd: string, base: AdaptivePipelinePlan): Promise<AdaptivePipelinePlan> {
+async function llmRefinePlan(prd: string, base: AdaptivePipelinePlan, provider?: 'groq' | 'gemini'): Promise<AdaptivePipelinePlan> {
   const catalog = {
     agents: (pipelineCapabilities.agents as CapabilityConfig[]).map((a) => a.id),
     tools: (pipelineCapabilities.tools as CapabilityConfig[]).map((t) => t.id),
@@ -212,7 +212,8 @@ You may remove optional agents/tools not needed. You may add optional ones if PR
         },
       ],
     },
-    'PipelinePlanner'
+    'PipelinePlanner',
+    { provider }
   );
 
   const parsed = parseJsonFromLlm<{
@@ -254,13 +255,13 @@ You may remove optional agents/tools not needed. You may add optional ones if PR
   };
 }
 
-export async function createAdaptivePlan(prd: string): Promise<AdaptivePipelinePlan> {
+export async function createAdaptivePlan(prd: string, provider?: 'groq' | 'gemini'): Promise<AdaptivePipelinePlan> {
   const base = planPipelineFromPrd(prd);
   if (!process.env.GROQ_API_KEY || process.env.DISABLE_ADAPTIVE_LLM_PLANNER === 'true') {
     return base;
   }
   try {
-    return await llmRefinePlan(prd, base);
+    return await llmRefinePlan(prd, base, provider);
   } catch (err) {
     console.warn('LLM pipeline planner unavailable — using config plan', err);
     return base;

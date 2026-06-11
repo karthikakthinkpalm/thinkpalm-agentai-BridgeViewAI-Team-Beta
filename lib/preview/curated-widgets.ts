@@ -43,8 +43,8 @@ export function shouldUseCuratedPreview(widgetName: string): boolean {
 
 export function pickCuratedPreview(
   widgetName: string,
-  previewMap: Record<string, ComponentType>
-): ComponentType | null {
+  previewMap: Record<string, ComponentType<any>>
+): ComponentType<any> | null {
   const canonical = normalizeWidgetName(widgetName);
 
   // Exact canonical match first — avoids two widgets collapsing to the same regex bucket

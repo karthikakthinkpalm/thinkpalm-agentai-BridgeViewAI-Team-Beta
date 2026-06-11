@@ -214,9 +214,19 @@ export function mergeDiscoveredWidgets(
   const merged = [...selected];
   const threshold = config().confidenceThreshold;
 
-  for (const rec of recommendations) {
+  // Sort recommendations by confidence descending
+  const sortedRecs = [...recommendations].sort((a, b) => b.confidence - a.confidence);
+
+  // Concrete clever approach: Only auto-expand the top 2 highest-confidence recommendations
+  // to avoid flooding the dashboard with generic fallback widgets ("empty cells").
+  // If the LLM (or config) suggests 10 things, we only pick the best 2.
+  let expandedCount = 0;
+  const MAX_AUTO_EXPAND = 0; // Disabled auto-expansion to prevent polluting non-vessel dashboards with Voyage and Engine monitors
+
+  for (const rec of sortedRecs) {
     if (rec.confidence <= threshold) continue;
     if (existing.has(rec.widget)) continue;
+    if (expandedCount >= MAX_AUTO_EXPAND) break;
 
     existing.add(rec.widget);
     autoExpanded.push(rec.widget);
@@ -231,6 +241,7 @@ export function mergeDiscoveredWidgets(
       interaction: 'Auto-expanded by BridgeView feature discovery',
       priority: rec.priority === 'critical' ? 'safety-critical' : 'operational',
     });
+    expandedCount++;
   }
 
   if (merged.length === selected.length && selected.length < 3) {

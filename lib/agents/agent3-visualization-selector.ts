@@ -42,7 +42,22 @@ export function runAgent3VisualizationSelector(
   const widgetGroups = new Map<string, { metrics: ClassifiedMetric[]; primary: MetricCategory }>();
 
   for (const m of classifiedMetrics) {
-    const widgetName = METRIC_WIDGET_OVERRIDE[m.name] ?? CATEGORY_WIDGET[m.primaryCategory];
+    // Dynamically generate the widget name from the entity (e.g., "berth_management" -> "BerthManagement")
+    let widgetName = '';
+    if (m.entity && m.entity.trim().length > 0) {
+      widgetName = m.entity
+        .split(/[^a-zA-Z0-9]+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join('');
+    }
+
+    // Fallback to hardcoded generics only if no entity was extracted or it's a generic domain
+    const genericDomains = ['Navigation', 'Fuel', 'Machinery', 'Crew', 'Safety'];
+    if (!widgetName || genericDomains.includes(widgetName)) {
+      widgetName = METRIC_WIDGET_OVERRIDE[m.name] ?? CATEGORY_WIDGET[m.primaryCategory] ?? 'GenericWidget';
+    }
+
     const existing = widgetGroups.get(widgetName);
     if (existing) {
       existing.metrics.push(m);

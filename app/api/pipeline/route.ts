@@ -4,13 +4,13 @@ import { recommendationsToJson } from '@/lib/tools/visualization-recommender';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prd } = await req.json();
+    const { prd, existingComponents, llmProvider } = await req.json();
 
     if (!prd || prd.trim() === '') {
       return NextResponse.json({ error: 'PRD text is required' }, { status: 400 });
     }
 
-    const result = await runPipeline(prd);
+    const result = await runPipeline(prd, existingComponents, llmProvider);
 
     return NextResponse.json({
       schema: result.schema,
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       featureDiscovery: result.featureDiscovery,
       agentTrace: result.agentTrace,
       warnings: result.warnings ?? [],
+      fallbackWidgets: result.fallbackWidgets ?? [],
       adaptivePlan: result.adaptivePlan,
       provisionedTools: result.provisionedTools ?? [],
     });

@@ -1,4 +1,4 @@
-import { createChatCompletion } from '../groq-chat';
+import { createChatCompletion } from '@/lib/llm-router';
 import { mapWidgetsAsync } from '../tools/widget-mapper.server';
 import { parsePrdForPreview } from '../preview/parse-prd';
 import type { ExtractedMetric, RequirementAnalysis } from '../types/pipeline';
@@ -70,8 +70,8 @@ function detectDomain(prd: string): string {
   return 'vessel monitoring';
 }
 
-export async function runAgent1RequirementAnalyzer(prd: string): Promise<Agent1Result> {
-  const { widgets: detectedWidgets } = await mapWidgetsAsync(prd);
+export async function runAgent1RequirementAnalyzer(prd: string, provider?: 'groq' | 'gemini'): Promise<Agent1Result> {
+  const { widgets: detectedWidgets } = await mapWidgetsAsync(prd, provider);
   const heuristicMetrics = extractMetricsHeuristic(prd);
   const systemPrompt = buildAgent1RequirementSystemPrompt();
   const userPrompt = buildAgent1RequirementUserPrompt(prd, detectedWidgets);
@@ -86,7 +86,8 @@ export async function runAgent1RequirementAnalyzer(prd: string): Promise<Agent1R
           { role: 'user', content: userPrompt },
         ],
       },
-      'Agent 1'
+      'Agent 1',
+      { provider }
     );
     const raw = response.choices[0]?.message?.content || '';
     const clean = raw.replace(/```json|```/g, '').trim();

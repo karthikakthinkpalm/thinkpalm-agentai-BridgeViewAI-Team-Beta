@@ -11,13 +11,14 @@ function isDefaultFallback(widgets: string[]): boolean {
 
 /** Config + LLM fallback when keyword rules produce only default widgets. */
 export async function mapWidgetsAsync(
-  text: string
+  text: string,
+  provider?: 'groq' | 'gemini'
 ): Promise<{ widgets: string[]; source: 'config' | 'llm' }> {
   const configResult = mapWidgets(text);
   const { result, source } = await withLlmFallback(
     configResult,
     (r) => isDefaultFallback(r) && text.trim().length > 40,
-    () => llmMapWidgets(text)
+    () => llmMapWidgets(text, provider)
   );
   return { widgets: result, source };
 }

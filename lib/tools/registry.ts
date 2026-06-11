@@ -12,6 +12,12 @@ export function getAllComponents(): Record<string, string> {
   return Object.fromEntries(registry);
 }
 
+export function injectComponents(components: Record<string, string>): void {
+  for (const [name, code] of Object.entries(components)) {
+    registry.set(name, code);
+  }
+}
+
 export function clearRegistry(): void {
   registry.clear();
 }

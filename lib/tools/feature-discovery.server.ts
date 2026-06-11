@@ -4,7 +4,7 @@ import type { RequirementAnalysis, SelectedWidget } from '@/lib/types/pipeline';
 import type { FeatureDiscoveryResult, FeatureRecommendation, VesselType } from '@/lib/types/feature-discovery';
 import type { DomainCoverage } from '@/lib/types/feature-discovery';
 import { getFeatureDiscoveryConfig, matchesAnyPattern } from './config-loader';
-import { llmFeatureRecommendations, withLlmFallback } from './llm-fallback';
+import { isLlmEnabled, llmFeatureRecommendations, withLlmFallback } from './llm-fallback';
 import {
   analyzeDomainCoverage,
   buildWidgetExplainability,
@@ -34,18 +34,29 @@ function dedupeRecommendations(recs: FeatureRecommendation[]): FeatureRecommenda
 async function generateMissingFeatureRecommendationsAsync(
   coverage: DomainCoverage[],
   vesselType: VesselType,
-  prd: string
+  prd: string,
+  domainContext?: string,
+  provider?: 'groq' | 'gemini'
 ): Promise<{ recommendations: FeatureRecommendation[]; source: 'config' | 'llm' }> {
-  const configRecs = generateMissingFeatureRecommendations(coverage, vesselType, prd);
   const missingDomains = coverage.filter((c) => !c.covered).map((c) => c.domain);
+  const configRecs = generateMissingFeatureRecommendations(coverage, vesselType, prd);
 
-  const { result, source } = await withLlmFallback(
-    configRecs,
-    (r) => r.length === 0 && missingDomains.length > 0,
-    () => llmFeatureRecommendations(prd, missingDomains)
-  );
+  // Concrete architecture: Pass the expert system's config recommendations to the LLM.
+  // The LLM acts as a semantic gatekeeper: it filters out config matches that don't fit the domain,
+  // and invents new domain-specific widgets where necessary.
+  if (isLlmEnabled()) {
+    try {
+      const llmResult = await llmFeatureRecommendations(prd, missingDomains, domainContext, configRecs, provider);
+      if (llmResult.length > 0) {
+        return { recommendations: dedupeRecommendations(filterByConfidence(llmResult)), source: 'llm' };
+      }
+    } catch (err) {
+      console.warn('LLM feature discovery failed — falling back to config rules', err);
+    }
+  }
 
-  return { recommendations: dedupeRecommendations(filterByConfidence(result)), source };
+  // Fallback to static ship-centric config rules only if LLM is down or returned nothing.
+  return { recommendations: dedupeRecommendations(filterByConfidence(configRecs)), source: 'config' };
 }
 
 /** Async variant with LLM enrichment for sparse config matches. */
@@ -55,7 +66,8 @@ export async function runFeatureDiscoveryAsync(
     requirements?: RequirementAnalysis;
     selectedWidgets?: SelectedWidget[];
     dataset?: Record<string, unknown>;
-  } = {}
+  } = {},
+  provider?: 'groq' | 'gemini'
 ): Promise<FeatureDiscoveryResult & { recommendationSource?: 'config' | 'llm' }> {
   const { requirements, selectedWidgets = [], dataset } = options;
 
@@ -67,7 +79,9 @@ export async function runFeatureDiscoveryAsync(
   const { recommendations: llmRecs, source } = await generateMissingFeatureRecommendationsAsync(
     domainCoverage,
     reqExtraction.vesselType,
-    prd
+    prd,
+    requirements?.domain,
+    provider
   );
 
   let recommendations = llmRecs;

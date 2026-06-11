@@ -35,15 +35,19 @@ export type GroqChatResult = {
 export async function createChatCompletion(
   params: Omit<ChatCompletionCreateParamsNonStreaming, 'model'>,
   label = 'Groq',
-  options?: { preferredModel?: string | null }
+  options?: { preferredModel?: string | null; allowedModels?: string[] }
 ): Promise<GroqChatResult> {
-  const chain = getGroqModelChain(options?.preferredModel);
+  let chain = getGroqModelChain(options?.preferredModel);
+  if (options?.allowedModels) {
+    chain = chain.filter((m) => options.allowedModels!.includes(m));
+  }
   let lastError: unknown;
 
   for (let i = 0; i < chain.length; i++) {
     const model = chain[i];
     try {
       const response = await groq.chat.completions.create({ ...params, model });
+      console.log(`[${label}] Using model: ${model}`);
       if (i > 0) {
         console.log(`${label}: switched to fallback model "${model}"`);
       }

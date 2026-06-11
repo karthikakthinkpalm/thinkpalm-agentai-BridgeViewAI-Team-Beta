@@ -1,4 +1,4 @@
-import { createChatCompletion } from '../groq-chat';
+import { createChatCompletion } from '@/lib/llm-router';
 import { checkExists, registerComponent } from '../tools/registry';
 import type { ParsedSchema } from '../types/pipeline';
 import {
@@ -17,7 +17,7 @@ export interface Agent5Result {
   warnings: string[];
 }
 
-export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Agent5Result> {
+export async function runAgent5ReactGenerator(schema: ParsedSchema, provider?: 'groq' | 'gemini'): Promise<Agent5Result> {
   const generated: Record<string, string> = {};
   const prompts: PromptRecord[] = [];
   const fallbackWidgets: string[] = [];
@@ -25,8 +25,25 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
   const systemPrompt = buildAgent5SystemPrompt();
   let preferredModel: string | null = null;
 
+  let generatedCount = 0;
+  const MAX_GENERATIONS = Number(process.env.MAX_GENERATIONS_PER_RUN) || 5;
+
   for (const widget of schema.widgets) {
     if (checkExists(widget.name)) continue;
+
+    if (generatedCount >= MAX_GENERATIONS) {
+      const code = buildFallbackComponent(
+        widget.name,
+        widget.description,
+        widget.archetype ?? 'card',
+        schema.domain
+      );
+      registerComponent(widget.name, code);
+      generated[widget.name] = code;
+      fallbackWidgets.push(widget.name);
+      warnings.push(`${widget.name}: skipped to respect rate limits (${MAX_GENERATIONS} max per run)`);
+      continue;
+    }
 
     const placement = schema.layoutPlan?.placements.find((p) => p.widget === widget.name);
     const vizHints = widget.recommendations
@@ -34,7 +51,7 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
       .join('\n');
 
     const archetype = widget.archetype ?? 'card';
-    const designSystemTemplate = await getDesignSystemTemplate(archetype);
+    const designSystemTemplate = await getDesignSystemTemplate(archetype, provider);
 
     const userPrompt = buildAgent5UserPrompt(
       widget.name,
@@ -83,7 +100,7 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
           ],
         },
         'Agent 5',
-        { preferredModel }
+        { preferredModel, provider }
       );
       preferredModel = model;
 
@@ -93,10 +110,11 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema): Promise<Age
       registerComponent(widget.name, clean);
       generated[widget.name] = clean;
       console.log(`Agent 5 generated: ${widget.name}`);
+      generatedCount++;
     } catch (err) {
       if (!isLlmUnavailableError(err)) throw err;
 
-      const reason = isRateLimitError(err) ? 'Groq rate limit' : 'LLM unavailable';
+      const reason = isRateLimitError(err) ? 'API rate limit' : 'LLM unavailable';
       const code = buildFallbackComponent(
         widget.name,
         widget.description,

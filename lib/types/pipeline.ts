@@ -109,6 +109,7 @@ export interface PipelineResult {
   maritimeReview: MaritimeReviewResult;
   agentTrace: { agent: string; status: string; detail: string }[];
   warnings?: string[];
+  fallbackWidgets?: string[];
   adaptivePlan?: {
     agents: string[];
     tools: string[];

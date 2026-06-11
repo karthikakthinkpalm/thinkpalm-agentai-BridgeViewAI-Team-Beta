@@ -22,6 +22,8 @@ interface SessionMemory {
   hierarchy: HierarchyNode | null;
   previewWidgets: string[];
   hiddenWidgets: string[];
+  fallbackWidgets: string[];
+  llmProvider: 'groq' | 'gemini';
   visualizations: VisualizationRecommendation[];
   featureDiscovery: FeatureDiscoveryResult | null;
 
@@ -35,6 +37,8 @@ interface SessionMemory {
   setHierarchy: (h: HierarchyNode | null) => void;
   setPreviewWidgets: (widgets: string[]) => void;
   setHiddenWidgets: (widgets: string[]) => void;
+  setFallbackWidgets: (widgets: string[]) => void;
+  setLlmProvider: (provider: 'groq' | 'gemini') => void;
   setVisualizations: (v: VisualizationRecommendation[]) => void;
   setFeatureDiscovery: (f: FeatureDiscoveryResult | null) => void;
   reset: () => void;
@@ -51,6 +55,8 @@ export const useMemory = create<SessionMemory>((set) => ({
   hierarchy: null,
   previewWidgets: [],
   hiddenWidgets: [],
+  fallbackWidgets: [],
+  llmProvider: 'gemini',
   visualizations: [],
   featureDiscovery: null,
 
@@ -64,6 +70,8 @@ export const useMemory = create<SessionMemory>((set) => ({
     set({ previewWidgets: asWidgetArray(previewWidgets) }),
   setHiddenWidgets: (hiddenWidgets) =>
     set({ hiddenWidgets: asWidgetArray(hiddenWidgets) }),
+  setFallbackWidgets: (fallbackWidgets) => set({ fallbackWidgets }),
+  setLlmProvider: (llmProvider) => set({ llmProvider }),
   setVisualizations: (visualizations) => set({ visualizations }),
   setFeatureDiscovery: (featureDiscovery) => set({ featureDiscovery }),
 
@@ -95,6 +103,7 @@ export const useMemory = create<SessionMemory>((set) => ({
       hierarchy: null,
       previewWidgets: [],
       hiddenWidgets: [],
+      fallbackWidgets: [],
       visualizations: [],
       featureDiscovery: null,
     }),

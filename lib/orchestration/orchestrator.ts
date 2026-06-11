@@ -1,7 +1,7 @@
 import type { ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions';
-import { createChatCompletion } from '@/lib/groq-chat';
+import { createChatCompletion } from '@/lib/llm-router';
 import { buildWidgetHierarchy } from '@/lib/preview/hierarchy';
-import { clearRegistry } from '@/lib/tools/registry';
+import { clearRegistry, injectComponents } from '@/lib/tools/registry';
 import type { PipelineResult } from '@/lib/types/pipeline';
 import {
   applyReviewStubs,
@@ -212,7 +212,7 @@ async function orchestrationLoop(ctx: PipelineContext): Promise<void> {
           tool_choice: 'required',
         },
         'Orchestrator',
-        { preferredModel: orchestratorModel }
+        { preferredModel: orchestratorModel, provider: ctx.llmProvider }
       );
       orchestratorModel = model;
       choice = response.choices[0]?.message;
@@ -270,7 +270,9 @@ function assertPipelineComplete(ctx: PipelineContext): void {
 }
 
 export async function runOrchestratedPipeline(
-  prd: string
+  prd: string,
+  existingComponents?: Record<string, string>,
+  llmProvider?: 'groq' | 'gemini'
 ): Promise<
   PipelineResult & {
     hierarchy: ReturnType<typeof buildWidgetHierarchy>;
@@ -279,10 +281,15 @@ export async function runOrchestratedPipeline(
 > {
   bootstrapOrchestration();
   clearDynamicTools();
-  clearRegistry();
+  if (existingComponents) {
+    injectComponents(existingComponents);
+  } else {
+    clearRegistry();
+  }
 
   const ctx = createInitialContext(prd);
-  ctx.plan = await createAdaptivePlan(prd);
+  ctx.llmProvider = llmProvider;
+  ctx.plan = await createAdaptivePlan(prd, llmProvider);
 
   ctx.agentTrace.push({
     agent: 'ADAPTIVE PLAN',
