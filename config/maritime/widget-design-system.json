@@ -64,7 +64,7 @@
       }
     },
     "route-map": {
-      "description": "Voyage route map with SVG path, port markers, vessel position, leg timeline.",
+      "description": "Voyage route map with progress markers, vessel position, and leg timeline.",
       "structure": {
         "mapContainer": "rounded-xl border bg-slate-950/70 p-4",
         "layout": "flex flex-col gap-4",
@@ -74,7 +74,7 @@
       }
     },
     "wind-rose": {
-      "description": "Polar wind rose — directional sectors with speed/frequency rings.",
+      "description": "Polar wind rose layout — directional sectors with speed/frequency data.",
       "structure": {
         "container": "flex items-center justify-center rounded-xl border bg-slate-950/70 p-4",
         "layout": "grid grid-cols-2 gap-4 text-center",
@@ -82,7 +82,7 @@
       }
     },
     "weather-map": {
-      "description": "Route-corridor weather overlay on mini nautical chart.",
+      "description": "Route-corridor weather overlay data.",
       "structure": {
         "mapContainer": "relative rounded-xl border overflow-hidden h-48",
         "layers": "wind arrows, wave height contours, swell direction",
@@ -99,11 +99,11 @@
       }
     },
     "area-chart": {
-      "description": "Stacked or single area chart for temporal trends.",
+      "description": "Bar chart simulating temporal trends using flex columns.",
       "structure": {
-        "container": "rounded-xl border bg-slate-950/70 p-4 h-40",
-        "svg": "area path with gradient fill, axis labels",
-        "crosshair": "hover vertical line with value tooltip"
+        "container": "rounded-xl border bg-slate-950/70 p-4 h-40 flex items-end gap-1",
+        "bar": "w-full bg-sky-500/50 hover:bg-sky-400 transition-colors rounded-t-sm",
+        "label": "text-xs text-slate-500 text-center mt-2"
       }
     },
     "timeline": {
@@ -115,11 +115,12 @@
       }
     },
     "circular-progress": {
-      "description": "SVG ring gauge for tank fill or voyage completion.",
+      "description": "SVG ring gauge using circle and strokeDasharray.",
       "structure": {
-        "ring": "SVG circle strokeDasharray animated fill",
-        "centerLabel": "percentage value in ring center",
-        "sublabel": "days remaining or capacity below"
+        "container": "relative h-32 w-32 flex items-center justify-center",
+        "ring": "SVG circle with strokeDasharray and strokeDashoffset",
+        "centerLabel": "absolute inset-0 flex flex-col items-center justify-center",
+        "sublabel": "text-xs text-slate-400"
       }
     },
     "bullet-chart": {
@@ -132,10 +133,10 @@
       }
     },
     "sparkline": {
-      "description": "Inline SVG sparkline for sensor streams and KPI trends.",
+      "description": "Miniature bar chart simulating a sparkline trend.",
       "structure": {
-        "container": "flex items-end gap-1 h-12",
-        "path": "SVG polyline with gradient area fill",
+        "container": "flex items-end gap-0.5 h-12 w-24",
+        "bar": "flex-1 bg-emerald-500/40 rounded-t-sm",
         "value": "current reading label right-aligned"
       }
     },

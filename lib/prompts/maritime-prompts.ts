@@ -141,13 +141,20 @@ REQUIREMENTS:
 - Typography: Use \`font-semibold text-slate-100\` for values, \`text-xs uppercase tracking-wider text-slate-500\` for labels. Use \`sky-400\`, \`cyan-400\`, or \`emerald-400\` for accents and gradients.
 - Tables: Use border-collapse, subtle borders between rows, text-left, text-sm.
 - CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data directly inside the component using variables or state. Make sure the hardcoded data exactly matches the domain context of the requested widget. Do not use \`({ data })\` or expect data from a parent.
+- CRITICAL REACT SYNTAX RULES:
+  - All adjacent JSX elements MUST be wrapped in an enclosing tag or fragment \`<></>\`. Do not return multiple root elements.
+  - Ensure all ternary operators are complete (e.g., \`cond ? a : b\`). Never leave a nested ternary without a final fallback value.
 - CRITICAL CSS & SVG RULES:
-  - DO NOT use \`absolute\` positioning to layer text over SVGs. Use standard Flexbox/Grid for layout.
-  - DO NOT use raw \`<path>\` elements to draw complex custom charts (like maps or wave lines).
-  - You MAY use simple SVG geometry (like \`<circle>\` or \`<rect>\`) to build beautiful circular gauges, donut charts, or sparklines. Use \`strokeDasharray\` and \`strokeDashoffset\` for circular progress.
-  - If you use an SVG for a gauge or icon, place it in a constrained container (e.g., \`relative h-24 w-24\`) and set the \`<svg>\` to \`h-full w-full object-contain -rotate-90\` (for donuts).
+  - CRITICAL: If you use \`absolute\` positioning, you MUST add \`relative\` to its immediate parent container to prevent the element from breaking out and overlapping the entire screen.
+  - DO NOT use raw \`<path>\` elements to draw complex custom vector icons (like engines, anchors, or ships). Use standard emoji or text abbreviations instead.
+  - When drawing mathematical SVGs (like scatter plots), ensure coordinates (\`cx\`, \`cy\`, \`r\`) are scaled proportionally to a 100x100 viewBox. DO NOT hardcode massive fixed radiuses (like \`r={80}\`) that bleed out of the box.
+  - You MAY use simple SVG geometry (like \`<circle>\` or \`<rect>\`) to build beautiful circular gauges, donut charts, scatter plots, or route maps. Use \`strokeDasharray\` and \`strokeDashoffset\` for circular progress.
+  - If you use an SVG for a gauge, place it in a constrained container (e.g., \`relative h-24 w-24\`) and set the \`<svg>\` to \`-rotate-90\` to start at the top. CRITICAL: NEVER put \`<text>\` inside a rotated \`<svg>\`, or the text will be sideways! Put the text in an overlay \`div\` (e.g., \`absolute inset-0 flex items-center justify-center\`).
+  - NEVER use \`vh\` or \`vw\` units for height/width calculations inside components, as this will break out of the container. Use \`%\` instead (e.g., \`height: \${value}%\`).
+  - Do not attempt to draw decorative SVG corners or custom borders. Stick to Tailwind \`rounded-xl border\`.
   - Avoid using excessively large text sizes (like \`text-5xl\`) that will overflow cards. Use \`text-2xl\` max.
-  - Never allow text to overlap other elements. Use semantic gaps (\`gap-4\`) and padding.
+  - Never allow text to overlap other elements. You MUST use \`truncate\` or \`min-w-0\` on text containers inside flexbox layouts to ensure they don't bleed into neighbors.
+  - Adapt background colors to the current theme. Unless explicitly rendering a light-themed dashboard, DO NOT use \`bg-white\` for large containers. Default to dark variants like \`bg-slate-900/50\`, \`bg-slate-800/40\`, etc.
 - Accessible: semantic HTML, aria-labels on interactive elements.
 - Export as default export named function matching the widget.
 - Self-contained: only import React from 'react'.
