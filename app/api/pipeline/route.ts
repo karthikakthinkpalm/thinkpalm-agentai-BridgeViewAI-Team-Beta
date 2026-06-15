@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       maritimeReview: result.maritimeReview,
       featureDiscovery: result.featureDiscovery,
       agentTrace: result.agentTrace,
+      debugTrace: result.debugTrace,
       warnings: result.warnings ?? [],
       fallbackWidgets: result.fallbackWidgets ?? [],
       adaptivePlan: result.adaptivePlan,

@@ -98,14 +98,16 @@ const REQUIREMENT_EXEMPLAR = `{
 export function buildAgent1RequirementSystemPrompt(): string {
   return `You are Agent 1: Requirement Analyzer for maritime bridge dashboards.
 
-TASK: Extract entities and metrics from the PRD. Do NOT select widgets or visualizations.
+TASK: Holistically evaluate the PRD to extract its semantic intent, operational domain, urgency, entities, and metrics. Do NOT select widgets or visualizations.
 
 OUTPUT RULES:
-- Return ONLY valid JSON matching this shape:
+- Return ONLY valid JSON matching this exact shape:
 ${REQUIREMENT_EXEMPLAR}
-- "entities": domain nouns (vessel, crew, fuel, navigation, etc.)
-- "metrics": measurable data points with name, description, entity, optional unit
-- "priority": safety-critical | operational | informational`;
+- "domain": Semantically infer the operational domain (e.g., "fleet operations", "cargo vessel monitoring", "passenger ferry", etc.).
+- "priority": Semantically infer the urgency. Must be exactly one of: safety-critical | operational | informational.
+- "userGoal": A short 5-10 word summary of the user's primary objective.
+- "entities": Domain nouns extracted from the context (e.g., vessel, crew, fuel, navigation, weather).
+- "metrics": Measurable data points with name, description, entity, and optional unit.`;
 }
 
 export function buildAgent1RequirementUserPrompt(prd: string, detectedWidgets: string[]): string {

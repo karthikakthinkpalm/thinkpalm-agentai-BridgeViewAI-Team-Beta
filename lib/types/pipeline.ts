@@ -108,6 +108,13 @@ export interface PipelineResult {
   uxReview: UXReviewResult;
   maritimeReview: MaritimeReviewResult;
   agentTrace: { agent: string; status: string; detail: string }[];
+  debugTrace?: {
+    extractedMetrics: ExtractedMetric[];
+    detectedPriority: string;
+    selectedWidgetNames: string[];
+    generationWarnings: string[];
+    fallbackWidgetsUsed: string[];
+  };
   warnings?: string[];
   fallbackWidgets?: string[];
   adaptivePlan?: {

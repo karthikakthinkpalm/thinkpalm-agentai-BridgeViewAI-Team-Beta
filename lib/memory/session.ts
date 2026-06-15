@@ -4,6 +4,7 @@ import type { HierarchyNode } from '@/lib/preview/hierarchy';
 import type { VisualizationRecommendation } from '@/lib/types/visualization';
 import type { FeatureDiscoveryResult } from '@/lib/types/feature-discovery';
 import { asWidgetArray } from '@/lib/tools/widget-mapper';
+import type { PipelineResult } from '@/lib/types/pipeline';
 
 interface LogEntry {
   time: string;
@@ -26,6 +27,7 @@ interface SessionMemory {
   llmProvider: 'groq' | 'gemini';
   visualizations: VisualizationRecommendation[];
   featureDiscovery: FeatureDiscoveryResult | null;
+  debugTrace: PipelineResult['debugTrace'] | null;
 
   setPrd: (text: string) => void;
   setSchema: (s: object) => void;
@@ -41,6 +43,7 @@ interface SessionMemory {
   setLlmProvider: (provider: 'groq' | 'gemini') => void;
   setVisualizations: (v: VisualizationRecommendation[]) => void;
   setFeatureDiscovery: (f: FeatureDiscoveryResult | null) => void;
+  setDebugTrace: (trace: PipelineResult['debugTrace'] | null) => void;
   reset: () => void;
 }
 
@@ -59,6 +62,7 @@ export const useMemory = create<SessionMemory>((set) => ({
   llmProvider: 'gemini',
   visualizations: [],
   featureDiscovery: null,
+  debugTrace: null,
 
   setPrd: (prdText) => set({ prdText }),
   setSchema: (schema) => set({ schema }),
@@ -74,6 +78,7 @@ export const useMemory = create<SessionMemory>((set) => ({
   setLlmProvider: (llmProvider) => set({ llmProvider }),
   setVisualizations: (visualizations) => set({ visualizations }),
   setFeatureDiscovery: (featureDiscovery) => set({ featureDiscovery }),
+  setDebugTrace: (debugTrace) => set({ debugTrace }),
 
   addComponent: (name, code) =>
     set((state) => ({
@@ -106,5 +111,6 @@ export const useMemory = create<SessionMemory>((set) => ({
       fallbackWidgets: [],
       visualizations: [],
       featureDiscovery: null,
+      debugTrace: null,
     }),
 }));

@@ -52,9 +52,8 @@ export function runAgent3VisualizationSelector(
         .join('');
     }
 
-    // Fallback to hardcoded generics only if no entity was extracted or it's a generic domain
-    const genericDomains = ['Navigation', 'Fuel', 'Machinery', 'Crew', 'Safety'];
-    if (!widgetName || genericDomains.includes(widgetName)) {
+    // Fallback to hardcoded generics only if no entity was extracted
+    if (!widgetName) {
       widgetName = METRIC_WIDGET_OVERRIDE[m.name] ?? CATEGORY_WIDGET[m.primaryCategory] ?? 'GenericWidget';
     }
 
@@ -69,12 +68,13 @@ export function runAgent3VisualizationSelector(
   const draftWidgets: SelectedWidget[] = [...widgetGroups.entries()].map(([name, group]) => {
     const avgConf = group.metrics.reduce((s, m) => s + m.confidence, 0) / group.metrics.length;
     const metricNames = group.metrics.map((m) => m.name);
+    const metricDetails = group.metrics.map((m) => m.description).join('; ');
     const context = `${metricNames.join(' ')} ${requirements.domain}`;
     const domain = detectSemanticDomain(context, name);
 
     return {
       name,
-      description: `Monitor ${metricNames.join(', ')} for ${requirements.domain}`,
+      description: `Dashboard widget to display and monitor: ${metricDetails}. Context: ${requirements.userGoal || requirements.domain}.`,
       archetype: 'pending',
       metrics: metricNames,
       visualization: 'pending',

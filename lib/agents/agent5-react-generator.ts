@@ -46,9 +46,7 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema, provider?: '
     }
 
     const placement = schema.layoutPlan?.placements.find((p) => p.widget === widget.name);
-    const vizHints = widget.recommendations
-      ?.map((r) => `${r.dataField}: use ${r.visualization} — ${r.reason}`)
-      .join('\n');
+    const vizHints = `Use visualization: ${widget.visualization}. Reason: ${widget.reason}`;
 
     const archetype = widget.archetype ?? 'card';
     const designSystemTemplate = await getDesignSystemTemplate(archetype, provider);

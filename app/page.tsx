@@ -15,6 +15,7 @@ import { dedupePreviewWidgets } from '@/lib/preview/curated-widgets';
 import { recommendVisualizations } from '@/lib/tools/visualization-recommender';
 import { VizRecommendationsPanel } from '@/components/viz-recommendations-panel';
 import { FeatureDiscoveryPanel } from '@/components/feature-discovery-panel';
+import { AgentTracePanel } from '@/components/agent-trace-panel';
 import { runFeatureDiscovery } from '@/lib/tools/feature-discovery';
 import type { FeatureDiscoveryResult } from '@/lib/types/feature-discovery';
 import { DEFAULT_PRD_SAMPLE } from '@/lib/input/prd-samples';
@@ -30,16 +31,17 @@ type SchemaSummary = {
   widgets?: string[];
 };
 
-type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview';
+type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview' | 'trace';
 type ThemeId = 'ocean' | 'harbor' | 'abyss';
 
 export default function Home() {
   const {
     prdText, schema, components, agentLog,
     status, widgetsFound, prompts, hierarchy, previewWidgets, hiddenWidgets, fallbackWidgets, visualizations, llmProvider,
+    debugTrace,
     setPrd, setSchema, setStatus, addComponent,
     addLog, setWidgetsFound, setPrompts, setHierarchy, setPreviewWidgets, setHiddenWidgets, setFallbackWidgets, setLlmProvider,
-    setVisualizations, featureDiscovery, setFeatureDiscovery, reset,
+    setVisualizations, featureDiscovery, setFeatureDiscovery, setDebugTrace, reset,
   } = useMemory();
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -142,6 +144,7 @@ export default function Home() {
       }
       setPreviewWidgets(asWidgetArray(data.schema?.widgets, asWidgetArray(data.tree)));
       setFallbackWidgets(data.fallbackWidgets ?? []);
+      setDebugTrace(data.debugTrace || null);
 
       const trace = (data.agentTrace as { agent: string; status: string; detail: string }[]) ?? [];
       for (const step of trace) {
@@ -196,6 +199,7 @@ export default function Home() {
     { id: 'prompts', label: 'Prompts' },
     { id: 'studio', label: 'Studio' },
     { id: 'preview', label: 'Live Preview' },
+    { id: 'trace', label: 'Trace' },
   ];
 
   const visiblePreviewWidgets = useMemo(() => {
@@ -471,6 +475,17 @@ export default function Home() {
                   schema={schemaObj}
                 />
               </>
+            )}
+            {centerTab === 'trace' && (
+              <div className="h-full">
+                {debugTrace ? (
+                  <AgentTracePanel trace={debugTrace} />
+                ) : (
+                  <div className="flex h-full items-center justify-center font-mono text-sm text-slate-500">
+                    No trace data available. Run the pipeline first.
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </section>

@@ -308,6 +308,14 @@ export async function runOrchestratedPipeline(
   const hierarchy = buildWidgetHierarchy(ctx.schema!);
   const tree = Object.keys(ctx.components!);
 
+  const debugTrace = {
+    extractedMetrics: ctx.schema?.requirements?.metrics || ctx.requirements?.metrics || [],
+    detectedPriority: ctx.schema?.priority || ctx.requirements?.priority || 'Unknown',
+    selectedWidgetNames: ctx.schema?.selectedWidgets?.map((w) => w.name) || ctx.selectedWidgets?.map((w) => w.name) || [],
+    generationWarnings: ctx.warnings || [],
+    fallbackWidgetsUsed: ctx.fallbackWidgets || []
+  };
+
   return {
     schema: ctx.schema!,
     components: ctx.components!,
@@ -320,6 +328,7 @@ export async function runOrchestratedPipeline(
     uxReview: ctx.uxReview!,
     maritimeReview: ctx.maritimeReview!,
     agentTrace: ctx.agentTrace,
+    debugTrace,
     warnings: ctx.warnings,
     adaptivePlan: ctx.plan,
     provisionedTools: ctx.provisionedTools ?? ctx.plan?.provisionedTools ?? [],

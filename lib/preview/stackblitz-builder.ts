@@ -49,11 +49,11 @@ export function buildStackBlitzProject(components: Record<string, string>, activ
     if (components[w]) {
       files[`src/components/${w}.tsx`] = components[w];
       imports.push(`import ${w} from './components/${w}';`);
-      renders.push(`        <div className="w-full"><${w} /></div>`);
+      renders.push(`        <div className="flex flex-col"><${w} /></div>`);
     }
   }
 
-  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-7xl mx-auto flex flex-col gap-8">\n      <h1 className="text-3xl font-bold text-sky-400 mb-4">Live Dashboard Preview</h1>\n      <div className="flex flex-col gap-8">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
+  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-[1600px] mx-auto">\n      <h1 className="text-3xl font-bold text-sky-400 mb-8">Live Dashboard Preview</h1>\n      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
 
   return { title: 'BridgeView AI Preview', description: 'Generated dashboard preview', template: 'node', files };
 }

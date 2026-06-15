@@ -547,7 +547,7 @@ export default function App() {
           <h1 className="text-3xl font-bold text-sky-400">${esc(data.vesselName)}</h1>
           <p className="mt-1 text-sm text-slate-400">${esc(data.route)} · ${esc(data.legLabel)} · ${esc(data.domain)}</p>
         </header>
-        <div className="flex flex-col gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max">
 ${renders.join('\n')}
         </div>
       </div>
