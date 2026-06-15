@@ -45,15 +45,23 @@ export function buildStackBlitzProject(components: Record<string, string>, activ
   const imports: string[] = [];
   const renders: string[] = [];
 
+  function getSpanClasses(name: string) {
+    const n = name.toLowerCase();
+    if (/tracker|timeline|map|feed|progress/i.test(n)) return 'col-span-12 xl:col-span-8';
+    if (/heatmap|analytics|dashboard/i.test(n)) return 'col-span-12 md:col-span-8 xl:col-span-6';
+    if (/alert|alarm/i.test(n)) return 'col-span-12 xl:col-span-4';
+    return 'col-span-12 md:col-span-6 xl:col-span-4';
+  }
+
   for (const w of activeWidgets) {
     if (components[w]) {
       files[`src/components/${w}.tsx`] = components[w];
       imports.push(`import ${w} from './components/${w}';`);
-      renders.push(`        <div className="flex flex-col"><${w} /></div>`);
+      renders.push(`        <div className="flex flex-col min-w-0 overflow-hidden ${getSpanClasses(w)}"><${w} /></div>`);
     }
   }
 
-  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-[1600px] mx-auto">\n      <h1 className="text-3xl font-bold text-sky-400 mb-8">Live Dashboard Preview</h1>\n      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-max">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
+  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-[1600px] mx-auto">\n      <h1 className="text-3xl font-bold text-sky-400 mb-8">Live Dashboard Preview</h1>\n      <div className="grid grid-cols-12 gap-6 auto-rows-max">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
 
   return { title: 'BridgeView AI Preview', description: 'Generated dashboard preview', template: 'node', files };
 }

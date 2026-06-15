@@ -270,6 +270,14 @@ export function WidgetPreview({ widgetName }: { widgetName: string }) {
   return <GenericWidgetPreview name={widgetName} />;
 }
 
+function getSpanClasses(name: string) {
+  const n = name.toLowerCase();
+  if (/tracker|timeline|map|feed|progress/i.test(n)) return 'col-span-12 xl:col-span-8';
+  if (/heatmap|analytics|dashboard/i.test(n)) return 'col-span-12 md:col-span-8 xl:col-span-6';
+  if (/alert|alarm/i.test(n)) return 'col-span-12 xl:col-span-4';
+  return 'col-span-12 md:col-span-6 xl:col-span-4';
+}
+
 function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
   const d = usePreviewData();
   const uniqueWidgets = dedupePreviewWidgets(widgets);
@@ -301,11 +309,13 @@ function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
           Open MOCK in StackBlitz
         </button>
       </div>
-      {uniqueWidgets.map((w) => (
-        <div key={w} className="animate-fade-in w-full">
-          <WidgetPreview widgetName={w} />
-        </div>
-      ))}
+      <div className="grid grid-cols-12 gap-6">
+        {uniqueWidgets.map((w) => (
+          <div key={w} className={`animate-fade-in flex flex-col min-w-0 overflow-hidden ${getSpanClasses(w)}`}>
+            <WidgetPreview widgetName={w} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
