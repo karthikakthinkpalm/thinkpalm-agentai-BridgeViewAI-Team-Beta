@@ -3,7 +3,9 @@ import type { PreviewContextData } from './parse-prd';
 import { buildCuratedStackBlitzProject } from './stackblitz-curated';
 
 /** @deprecated Use openCuratedStackBlitz — LLM components diverge from live preview. */
-export function buildStackBlitzProject(components: Record<string, string>, activeWidgets: string[]): Project {
+export function buildStackBlitzProject(components: Record<string, string>, activeWidgets: string[], prd: string): Project {
+  const titleMatch = prd.match(/^#\s+(.+)$/m);
+  const dashboardTitle = titleMatch ? titleMatch[1].trim() : 'Live Dashboard Preview';
   const files: Record<string, string> = {
     'index.html': `<!DOCTYPE html>
 <html lang="en" class="dark">
@@ -45,25 +47,17 @@ export function buildStackBlitzProject(components: Record<string, string>, activ
   const imports: string[] = [];
   const renders: string[] = [];
 
-  function getSpanClasses(name: string) {
-    const n = name.toLowerCase();
-    if (/tracker|timeline|map|feed|progress/i.test(n)) return 'col-span-12 xl:col-span-8';
-    if (/heatmap|analytics|dashboard/i.test(n)) return 'col-span-12 md:col-span-8 xl:col-span-6';
-    if (/alert|alarm/i.test(n)) return 'col-span-12 xl:col-span-4';
-    return 'col-span-12 md:col-span-6 xl:col-span-4';
-  }
-
   for (const w of activeWidgets) {
     if (components[w]) {
       files[`src/components/${w}.tsx`] = components[w];
       imports.push(`import ${w} from './components/${w}';`);
-      renders.push(`        <div className="flex flex-col min-w-0 overflow-hidden ${getSpanClasses(w)}"><${w} /></div>`);
+      renders.push(`        <div className="break-inside-avoid mb-6 flex flex-col min-w-0 overflow-hidden"><${w} /></div>`);
     }
   }
 
-  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-[1600px] mx-auto">\n      <h1 className="text-3xl font-bold text-sky-400 mb-8">Live Dashboard Preview</h1>\n      <div className="grid grid-cols-12 gap-6 auto-rows-max">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
+  files['src/App.tsx'] = `import React from 'react';\n${imports.join('\n')}\nexport default function App() {\n  return (\n    <div className="p-8 max-w-[1600px] mx-auto">\n      <h1 className="text-3xl font-bold text-sky-400 mb-8">${dashboardTitle}</h1>\n      <div className="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-6">\n${renders.join('\n')}\n      </div>\n    </div>\n  );\n}\n`;
 
-  return { title: 'BridgeView AI Preview', description: 'Generated dashboard preview', template: 'node', files };
+  return { title: `BridgeView — ${dashboardTitle}`, description: 'Generated dashboard preview', template: 'node', files };
 }
 
 /** Open StackBlitz with curated components that match the in-app Live Preview. */
@@ -72,7 +66,7 @@ export function openCuratedStackBlitz(previewData: PreviewContextData, activeWid
   sdk.openProject(project, { openFile: 'src/App.tsx', view: 'preview' });
 }
 
-export function openStackBlitz(components: Record<string, string>, activeWidgets: string[]) {
-  const project = buildStackBlitzProject(components, activeWidgets);
+export function openStackBlitz(components: Record<string, string>, activeWidgets: string[], prd: string) {
+  const project = buildStackBlitzProject(components, activeWidgets, prd);
   sdk.openProject(project, { openFile: 'src/App.tsx', view: 'preview' });
 }

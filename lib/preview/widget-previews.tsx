@@ -270,15 +270,7 @@ export function WidgetPreview({ widgetName }: { widgetName: string }) {
   return <GenericWidgetPreview name={widgetName} />;
 }
 
-function getSpanClasses(name: string) {
-  const n = name.toLowerCase();
-  if (/tracker|timeline|map|feed|progress/i.test(n)) return 'col-span-12 xl:col-span-8';
-  if (/heatmap|analytics|dashboard/i.test(n)) return 'col-span-12 md:col-span-8 xl:col-span-6';
-  if (/alert|alarm/i.test(n)) return 'col-span-12 xl:col-span-4';
-  return 'col-span-12 md:col-span-6 xl:col-span-4';
-}
-
-function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
+function DashboardPreviewInner({ widgets, components, prd }: { widgets: string[]; components?: Record<string, string>; prd: string }) {
   const d = usePreviewData();
   const uniqueWidgets = dedupePreviewWidgets(widgets);
 
@@ -291,27 +283,20 @@ function DashboardPreviewInner({ widgets }: { widgets: string[] }) {
     );
   }
 
-  const handleOpenStackBlitz = async () => {
-    const { openCuratedStackBlitz } = await import('./stackblitz-builder');
-    openCuratedStackBlitz(d, uniqueWidgets);
-  };
+
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <p className="font-mono text-xs uppercase tracking-wider text-slate-500">Live Preview</p>
-        <button
-          onClick={handleOpenStackBlitz}
-          disabled={uniqueWidgets.length === 0}
-          className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-slate-700 disabled:opacity-40"
-          title="Opens the CURATED MOCK dashboard (does NOT contain your AI generated code)"
-        >
-          Open MOCK in StackBlitz
-        </button>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-100">{d.title}</h2>
+          <p className="font-mono text-xs uppercase tracking-wider text-slate-500 mt-2">Live Preview</p>
+        </div>
+
       </div>
-      <div className="grid grid-cols-12 gap-6">
+      <div className="columns-1 xl:columns-2 2xl:columns-3 gap-6">
         {uniqueWidgets.map((w) => (
-          <div key={w} className={`animate-fade-in flex flex-col min-w-0 overflow-hidden ${getSpanClasses(w)}`}>
+          <div key={w} className="break-inside-avoid mb-6 flex flex-col min-w-0 overflow-hidden">
             <WidgetPreview widgetName={w} />
           </div>
         ))}
@@ -324,14 +309,16 @@ export function DashboardPreview({
   widgets,
   prd,
   schema,
+  components,
 }: {
   widgets: string[];
   prd: string;
   schema?: { domain?: string; layout?: string; priority?: string; widgets?: string[] } | null;
+  components?: Record<string, string>;
 }) {
   return (
     <PreviewProvider prd={prd} schema={schema}>
-      <DashboardPreviewInner widgets={widgets} />
+      <DashboardPreviewInner widgets={widgets} components={components} prd={prd} />
     </PreviewProvider>
   );
 }

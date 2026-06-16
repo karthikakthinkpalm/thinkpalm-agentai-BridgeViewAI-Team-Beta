@@ -14,10 +14,12 @@ export function CodeExportBar({
   selectedWidget,
   code,
   allComponents,
+  prd,
 }: {
   selectedWidget: string;
   code: string;
   allComponents: Record<string, string>;
+  prd: string;
 }) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'ok' | 'fail'>('idle');
   const count = Object.keys(allComponents).length;
@@ -65,7 +67,7 @@ export function CodeExportBar({
           </button>
           <button
             type="button"
-            onClick={() => openStackBlitz(allComponents, Object.keys(allComponents))}
+            onClick={() => openStackBlitz(allComponents, Object.keys(allComponents), prd)}
             className="rounded-xl border border-orange-400/30 bg-orange-400/10 px-3 py-1.5 font-mono text-[0.65rem] text-orange-200 transition hover:bg-orange-400/20"
           >
             ↗ Open in StackBlitz

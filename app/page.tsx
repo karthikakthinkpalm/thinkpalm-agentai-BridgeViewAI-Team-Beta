@@ -533,6 +533,7 @@ export default function Home() {
                 selectedWidget={selectedWidget}
                 code={components[selectedWidget] ?? ''}
                 allComponents={components}
+                prd={prdText}
               />
 
               <div className="custom-scrollbar flex-1 overflow-auto p-4">

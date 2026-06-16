@@ -147,7 +147,7 @@ REQUIREMENTS:
   - All adjacent JSX elements MUST be wrapped in an enclosing tag or fragment \`<></>\`. Do not return multiple root elements.
   - Ensure all ternary operators are complete (e.g., \`cond ? a : b\`). Never leave a nested ternary without a final fallback value.
 - CRITICAL CSS & SVG RULES:
-  - CRITICAL: If you use \`absolute\` positioning, you MUST add \`relative\` to its immediate parent container to prevent the element from breaking out and overlapping the entire screen.
+  - CRITICAL: NEVER use \`fixed\` positioning, \`w-screen\`, or \`h-screen\` for overlays or backgrounds. It will break out of the dashboard grid and ruin the entire page. Only use \`absolute\`, and ensure the parent has \`relative\`.
   - DO NOT use raw \`<path>\` elements to draw complex custom vector icons (like engines, anchors, or ships). Use standard emoji or text abbreviations instead.
   - When drawing mathematical SVGs (like scatter plots), ensure coordinates (\`cx\`, \`cy\`, \`r\`) are scaled proportionally to a 100x100 viewBox. DO NOT hardcode massive fixed radiuses (like \`r={80}\`) that bleed out of the box.
   - You MAY use simple SVG geometry (like \`<circle>\` or \`<rect>\`) to build beautiful circular gauges, donut charts, scatter plots, or route maps. Use \`strokeDasharray\` and \`strokeDashoffset\` for circular progress.

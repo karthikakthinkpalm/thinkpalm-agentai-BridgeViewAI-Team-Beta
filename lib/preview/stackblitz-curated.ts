@@ -528,19 +528,11 @@ export function buildCuratedStackBlitzProject(data: PreviewContextData, activeWi
   const imports: string[] = [];
   const renders: string[] = [];
 
-  function getSpanClasses(name: string) {
-    const n = name.toLowerCase();
-    if (/tracker|timeline|map|feed|progress/i.test(n)) return 'col-span-12 xl:col-span-8';
-    if (/heatmap|analytics|dashboard/i.test(n)) return 'col-span-12 md:col-span-8 xl:col-span-6';
-    if (/alert|alarm/i.test(n)) return 'col-span-12 xl:col-span-4';
-    return 'col-span-12 md:col-span-6 xl:col-span-4';
-  }
-
   for (const w of widgets) {
     const canonical = normalizeWidgetName(w);
     files[`src/components/${canonical}.tsx`] = buildCuratedComponent(canonical, data);
     imports.push(`import ${canonical} from './components/${canonical}';`);
-    renders.push(`        <div className="flex flex-col min-w-0 overflow-hidden ${getSpanClasses(canonical)}"><${canonical} /></div>`);
+    renders.push(`        <div className="break-inside-avoid mb-6 flex flex-col min-w-0 overflow-hidden"><${canonical} /></div>`);
   }
 
   files['src/App.tsx'] = `import React from 'react';
@@ -552,10 +544,10 @@ export default function App() {
       <div className="mx-auto max-w-7xl flex flex-col gap-8">
         <header className="border-b border-white/10 pb-4">
           <p className="text-[0.65rem] uppercase tracking-[0.35em] text-slate-500">BridgeView AI</p>
-          <h1 className="text-3xl font-bold text-sky-400">${esc(data.vesselName)}</h1>
+          <h1 className="text-3xl font-bold text-sky-400">${esc(data.title)}</h1>
           <p className="mt-1 text-sm text-slate-400">${esc(data.route)} · ${esc(data.legLabel)} · ${esc(data.domain)}</p>
         </header>
-        <div className="grid grid-cols-12 gap-6 auto-rows-max">
+        <div className="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-6">
 ${renders.join('\n')}
         </div>
       </div>
@@ -565,7 +557,7 @@ ${renders.join('\n')}
 `;
 
   return {
-    title: `BridgeView — ${data.vesselName}`,
+    title: `BridgeView — ${data.title}`,
     description: 'Curated dashboard preview matching live preview',
     template: 'node',
     files,

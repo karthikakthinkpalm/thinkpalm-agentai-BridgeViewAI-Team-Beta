@@ -22,6 +22,7 @@ export interface PreviewAlert {
 }
 
 export interface PreviewContextData {
+  title: string;
   vesselName: string;
   domain: string;
   layout: string;
@@ -63,6 +64,12 @@ function extractVesselName(text: string): string {
     if (m?.[1]) return m[1].trim().replace(/\s+/g, ' ');
   }
   return 'MV Unnamed';
+}
+
+function extractTitle(text: string): string {
+  const match = text.match(/^#\s+(.+)$/m);
+  if (match) return match[1].trim();
+  return 'Live Dashboard Preview';
 }
 
 function extractRoute(text: string, vessel: string): string {
@@ -222,6 +229,7 @@ export function parsePrdForPreview(prd: string, schema?: { domain?: string; layo
   const currentLeg = seededInt(vesselName + 'leg', 1, totalLegs);
 
   return {
+    title: extractTitle(prd),
     vesselName,
     domain,
     layout,
