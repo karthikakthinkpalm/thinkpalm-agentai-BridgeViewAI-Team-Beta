@@ -465,16 +465,26 @@ export default function Home() {
               />
             )}
             {centerTab === 'preview' && (
-              <>
-                <p className="mb-3 text-xs text-slate-500">
-                  Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
-                </p>
-                <DashboardPreview
-                  widgets={visiblePreviewWidgets}
-                  prd={prdText}
-                  schema={schemaObj}
-                />
-              </>
+              status !== 'done' ? (
+                <div className="flex h-full flex-col items-center justify-center font-mono text-sm text-slate-500 p-8 text-center gap-2">
+                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/20 text-xl">
+                    ⚡
+                  </div>
+                  <p>Live preview will be available after UI generation.</p>
+                  <p className="text-xs text-slate-600">Click "Generate UI" to begin the pipeline.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-3 text-xs text-slate-500">
+                    Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
+                  </p>
+                  <DashboardPreview
+                    widgets={visiblePreviewWidgets}
+                    prd={prdText}
+                    schema={schemaObj}
+                  />
+                </>
+              )
             )}
             {centerTab === 'trace' && (
               <div className="h-full">
