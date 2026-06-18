@@ -9,17 +9,20 @@ import {
   productionizeComponent,
 } from '@/lib/export/code-export';
 import { openStackBlitz } from '@/lib/preview/stackblitz-builder';
+import { openStitchPreviewStackBlitz } from '@/lib/stitch/stackblitz-preview';
 
 export function CodeExportBar({
   selectedWidget,
   code,
   allComponents,
   prd,
+  livePreviewHtml,
 }: {
   selectedWidget: string;
   code: string;
   allComponents: Record<string, string>;
   prd: string;
+  livePreviewHtml?: string;
 }) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'ok' | 'fail'>('idle');
   const count = Object.keys(allComponents).length;
@@ -67,7 +70,13 @@ export function CodeExportBar({
           </button>
           <button
             type="button"
-            onClick={() => openStackBlitz(allComponents, Object.keys(allComponents), prd)}
+            onClick={() => {
+              if (livePreviewHtml) {
+                openStitchPreviewStackBlitz(livePreviewHtml, prd);
+              } else {
+                openStackBlitz(allComponents, Object.keys(allComponents), prd);
+              }
+            }}
             className="rounded-xl border border-orange-400/30 bg-orange-400/10 px-3 py-1.5 font-mono text-[0.65rem] text-orange-200 transition hover:bg-orange-400/20"
           >
             ↗ Open in StackBlitz

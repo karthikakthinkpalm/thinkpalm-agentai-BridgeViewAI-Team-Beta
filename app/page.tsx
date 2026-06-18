@@ -8,7 +8,7 @@ import { HierarchyTree } from '@/components/hierarchy-tree';
 import { CodeExportBar } from '@/components/code-export-bar';
 import { DashboardStudio } from '@/components/dashboard-studio';
 import { PrdSamplePicker } from '@/components/prd-sample-picker';
-import { DashboardPreview } from '@/lib/preview/widget-previews';
+import { StitchLivePreview, type StitchPreviewState } from '@/components/stitch-live-preview';
 import { parsePrdForPreview } from '@/lib/preview/parse-prd';
 import { asWidgetArray } from '@/lib/tools/widget-mapper';
 import { dedupePreviewWidgets } from '@/lib/preview/curated-widgets';
@@ -31,7 +31,7 @@ type SchemaSummary = {
   widgets?: string[];
 };
 
-type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview' | 'trace';
+type CenterTab = 'memory' | 'prompts' | 'studio' | 'trace' | 'code' | 'history';
 type ThemeId = 'ocean' | 'harbor' | 'abyss';
 
 export default function Home() {
@@ -46,8 +46,21 @@ export default function Home() {
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedWidget, setSelectedWidget] = useState('');
-  const [centerTab, setCenterTab] = useState<CenterTab>('preview');
+  const [centerTab, setCenterTab] = useState<CenterTab>('memory');
   const [theme, setTheme] = useState<ThemeId>('ocean');
+  const [stitchProjectId, setStitchProjectId] = useState<string | null>(null);
+  const [previewCode, setPreviewCode] = useState<{
+    components: Record<string, string>;
+    tree: string[];
+    prompts: PromptRecord[];
+  }>({ components: {}, tree: [], prompts: [] });
+  const [stitchPreview, setStitchPreview] = useState<StitchPreviewState>({
+    html: '',
+    imageUrl: '',
+    screenId: '',
+    projectId: '',
+    status: 'idle',
+  });
 
   useEffect(() => {
     loadHistory().then(setHistory);
@@ -97,6 +110,61 @@ export default function Home() {
     setPreviewWidgets(next.length > 0 ? next : detected);
   }, [prdText, setPreviewWidgets]);
 
+  async function runStitchPreview() {
+    setStitchPreview((prev) => ({ ...prev, status: 'loading', error: undefined }));
+    addLog('STITCH', 'Generating live preview via Google Stitch API…');
+
+    try {
+      const detected = parsePrdForPreview(prdText, schemaObj).widgets;
+      const res = await fetch('/api/stitch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prd: prdText,
+          widgets: detected,
+          domain: schemaObj?.domain ?? parsedPreview.domain,
+          layout: schemaObj?.layout ?? parsedPreview.layout,
+          projectId: stitchProjectId ?? undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        const msg = data.detail ? `${data.error}: ${data.detail}` : data.error;
+        setStitchPreview((prev) => ({ ...prev, status: 'error', error: msg }));
+        addLog('STITCH', `Error: ${msg}`);
+        return;
+      }
+
+      setStitchProjectId(data.projectId);
+      setPreviewCode({
+        components: data.components ?? {},
+        tree: Array.isArray(data.tree) ? data.tree : [],
+        prompts: Array.isArray(data.prompts) ? data.prompts : [],
+      });
+      setStitchPreview({
+        html: data.html,
+        imageUrl: data.imageUrl,
+        screenId: data.screenId,
+        projectId: data.projectId,
+        status: 'ready',
+      });
+      const files = Array.isArray(data.tree) ? data.tree.length : 0;
+      if (files > 0) {
+        setSelectedWidget(data.tree[0]);
+        setCenterTab('code');
+      }
+      addLog('STITCH', 'Live preview ready (non-actionable tabs/links removed)');
+      addLog('EXPORT', `Production code generated from preview (${files} file${files === 1 ? '' : 's'})`);
+      addLog('STITCH', 'Prompts updated from live preview generation');
+    } catch (err) {
+      const msg = String(err);
+      setStitchPreview((prev) => ({ ...prev, status: 'error', error: msg }));
+      addLog('STITCH', `Failed: ${msg}`);
+    }
+  }
+
   async function runPipeline() {
     if (!prdText.trim()) return;
     
@@ -104,10 +172,20 @@ export default function Home() {
     
     if (!isContinuing) {
       reset();
+      setPreviewCode({ components: {}, tree: [], prompts: [] });
+      setStitchPreview({
+        html: '',
+        imageUrl: '',
+        screenId: '',
+        projectId: '',
+        status: 'idle',
+      });
     }
-    
+
     setStatus('running');
     setCenterTab('memory');
+
+    const stitchPromise = runStitchPreview();
 
     addLog('SYSTEM', '7-agent pipeline started');
     addLog('AGENT 1', 'Requirement Analyzer — extracting entities and metrics...');
@@ -159,8 +237,7 @@ export default function Home() {
         addComponent(name, data.components[name]);
       }
 
-      addLog('PREVIEW', 'Live dashboard preview ready');
-      addLog('EXPORT', 'Use Copy / Download to export production code');
+      addLog('PREVIEW', 'Stitch live preview generating in parallel');
 
       await saveRun(prdText, data.schema, data.tree);
       addLog('MEMORY', 'Run saved to long-term memory');
@@ -170,9 +247,13 @@ export default function Home() {
 
       setStatus('done');
       addLog('SYSTEM', 'Pipeline complete — preview + code export available');
-      setCenterTab('preview');
+      setCenterTab('code');
 
-      if (data.tree.length > 0) setSelectedWidget(data.tree[0]);
+      if (data.tree.length > 0 && previewCode.tree.length === 0) {
+        setSelectedWidget(data.tree[0]);
+      }
+
+      await stitchPromise;
     } catch (err) {
       addLog('SYSTEM', `Failed: ${String(err)}`);
       setStatus('error');
@@ -180,6 +261,17 @@ export default function Home() {
   }
 
   const tree = Object.keys(components);
+  const exportTree = previewCode.tree.length > 0 ? previewCode.tree : tree;
+  const exportComponents =
+    previewCode.tree.length > 0 ? previewCode.components : components;
+  const displayPrompts = useMemo(() => {
+    const stitchPrompts = previewCode.prompts;
+    const agentPrompts = prompts.filter((p) => p.agent !== 'STITCH');
+    if (stitchPrompts.length > 0) {
+      return [...stitchPrompts, ...agentPrompts];
+    }
+    return prompts;
+  }, [previewCode.prompts, prompts]);
   const schemaDomain = schemaObj?.domain ?? parsedPreview.domain;
   const schemaLayout = schemaObj?.layout ?? parsedPreview.layout;
 
@@ -194,13 +286,18 @@ export default function Home() {
     status === 'error' ? 'border-rose-400/40 bg-rose-400/10 text-rose-200' :
     'border-slate-600/60 bg-slate-900/70 text-slate-300';
 
-  const centerTabs: { id: CenterTab; label: string }[] = [
-    { id: 'memory', label: 'Memory' },
-    { id: 'prompts', label: 'Prompts' },
-    { id: 'studio', label: 'Studio' },
-    { id: 'preview', label: 'Live Preview' },
-    { id: 'trace', label: 'Trace' },
-  ];
+  const livePreviewReady = stitchPreview.status === 'ready';
+
+  const centerTabs: { id: CenterTab; label: string }[] = livePreviewReady
+    ? [
+        { id: 'memory', label: 'Memory' },
+        { id: 'prompts', label: 'Prompts' },
+        { id: 'studio', label: 'Studio' },
+        { id: 'trace', label: 'Trace' },
+        { id: 'code', label: 'Production Code' },
+        { id: 'history', label: 'Long-Term Memory' },
+      ]
+    : [];
 
   const visiblePreviewWidgets = useMemo(() => {
     const detected = new Set(parsedPreview.widgets);
@@ -233,7 +330,7 @@ export default function Home() {
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-white">BridgeView AI</h1>
                 <p className="text-sm text-slate-400">
-                  Reads specs → proposes widget hierarchy → live preview → exports React code.
+                  Reads specs → Stitch live preview → exports React code.
                 </p>
               </div>
             </div>
@@ -311,9 +408,10 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[minmax(280px,0.85fr)_minmax(340px,1fr)_minmax(320px,1fr)_minmax(300px,0.9fr)] xl:overflow-hidden">
+      <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-2 xl:overflow-hidden">
 
-        {/* LEFT — Spec input */}
+        {/* LEFT HALF — Spec + workspace tabs */}
+        <div className="grid min-h-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(260px,0.42fr)_1fr]">
         <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden xl:min-h-0">
           <div className="border-b border-white/10 p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -370,6 +468,7 @@ export default function Home() {
                     log.agent === 'TOOL PROVISIONER' ? 'text-lime-400' :
                     log.agent.includes('SKIPPED') || (log.message?.toLowerCase().includes('skipped') ?? false) ? 'text-slate-500' :
                     log.agent === 'PREVIEW' ? 'text-cyan-400' :
+                    log.agent === 'STITCH' ? 'text-sky-400' :
                     log.agent === 'EXPORT' ? 'text-amber-400' :
                     log.agent === 'MEMORY' ? 'text-purple-400' :
                     'text-slate-400'
@@ -383,8 +482,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CENTER — Memory / Prompts / Studio / Live Preview */}
+        {/* Workspace — Memory / Prompts / Studio / Trace / Code / History */}
         <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-150 xl:min-h-0">
+          {centerTabs.length > 0 && (
           <div className="flex border-b border-white/10">
             {centerTabs.map((tab) => (
               <button
@@ -401,9 +501,23 @@ export default function Home() {
               </button>
             ))}
           </div>
+          )}
 
           <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
-            {centerTab === 'memory' && (
+            {!livePreviewReady && (
+              <div className="flex h-full min-h-[16rem] flex-col items-center justify-center p-8 text-center">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/20 text-xl">
+                  ⚡
+                </div>
+                <p className="font-mono text-sm text-slate-400">
+                  Workspace tabs unlock after the live preview is ready.
+                </p>
+                <p className="mt-2 max-w-sm text-xs text-slate-500">
+                  Click &quot;Generate UI&quot; — Memory, Prompts, Studio, Trace, and Production Code appear when Stitch finishes.
+                </p>
+              </div>
+            )}
+            {livePreviewReady && centerTab === 'memory' && (
               <>
                 <div className="mb-4 grid grid-cols-2 gap-2 text-xs font-mono">
                   <div className="metric-card">
@@ -427,7 +541,7 @@ export default function Home() {
                   selectedId={selectedWidget}
                   onSelect={(id) => {
                     setSelectedWidget(id);
-                    setCenterTab('preview');
+                    setCenterTab('code');
                   }}
                 />
                 <div className="mt-6 border-t border-white/10 pt-4">
@@ -444,8 +558,8 @@ export default function Home() {
                 </div>
               </>
             )}
-            {centerTab === 'prompts' && <PromptPanel prompts={prompts} />}
-            {centerTab === 'studio' && (
+            {livePreviewReady && centerTab === 'prompts' && <PromptPanel prompts={displayPrompts} />}
+            {livePreviewReady && centerTab === 'studio' && (
               <DashboardStudio
                 widgets={
                   asWidgetArray(previewWidgets).length
@@ -464,29 +578,7 @@ export default function Home() {
                 onShowAll={() => setHiddenWidgets([])}
               />
             )}
-            {centerTab === 'preview' && (
-              status !== 'done' ? (
-                <div className="flex h-full flex-col items-center justify-center font-mono text-sm text-slate-500 p-8 text-center gap-2">
-                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/20 text-xl">
-                    ⚡
-                  </div>
-                  <p>Live preview will be available after UI generation.</p>
-                  <p className="text-xs text-slate-600">Click "Generate UI" to begin the pipeline.</p>
-                </div>
-              ) : (
-                <>
-                  <p className="mb-3 text-xs text-slate-500">
-                    Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
-                  </p>
-                  <DashboardPreview
-                    widgets={visiblePreviewWidgets}
-                    prd={prdText}
-                    schema={schemaObj}
-                  />
-                </>
-              )
-            )}
-            {centerTab === 'trace' && (
+            {livePreviewReady && centerTab === 'trace' && (
               <div className="h-full">
                 {debugTrace ? (
                   <AgentTracePanel trace={debugTrace} />
@@ -497,100 +589,95 @@ export default function Home() {
                 )}
               </div>
             )}
-          </div>
-        </section>
-
-        {/* CODE + EXPORT */}
-        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-300 xl:min-h-0">
-          <div className="border-b border-white/10 p-4">
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Production Code</p>
-              <span className="rounded-full bg-teal-400/10 px-2.5 py-1 text-[0.65rem] font-mono text-teal-200">{tree.length} files</span>
-            </div>
-          </div>
-
-          {tree.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center p-8 text-center">
-              <div className="max-w-sm">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-teal-300/20 bg-teal-300/10 text-3xl">⌁</div>
-                <h2 className="text-lg font-semibold text-slate-200">No exported code yet</h2>
-                <p className="mt-2 text-sm text-slate-500">
-                  Run the pipeline to generate production-ready React TSX components with copy and download export.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="border-b border-white/10 p-3 space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
-                {tree.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setSelectedWidget(name)}
-                    className={`w-full rounded-xl px-3 py-2 text-left text-xs font-mono flex items-center gap-2 transition ${
-                      selectedWidget === name
-                        ? 'border border-teal-400/60 bg-teal-400/15 text-teal-100'
-                        : 'border border-white/5 bg-slate-950/60 text-slate-300 hover:bg-slate-900/80'
-                    }`}
-                  >
-                    <span className="text-emerald-400">✓</span>
-                    {name}.tsx
-                  </button>
-                ))}
-              </div>
-
-              <CodeExportBar
-                selectedWidget={selectedWidget}
-                code={components[selectedWidget] ?? ''}
-                allComponents={components}
-                prd={prdText}
-              />
-
-              <div className="custom-scrollbar flex-1 overflow-auto p-4">
-                {selectedWidget && (
-                  <>
-                    <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">
-                      {selectedWidget}.tsx
-                    </p>
-                    <pre className="rounded-2xl border border-slate-700/70 bg-slate-950/85 p-4 text-xs font-mono leading-relaxed text-yellow-200 whitespace-pre-wrap shadow-inner">
-                      {components[selectedWidget]}
-                    </pre>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </section>
-
-        {/* HISTORY */}
-        <section className="glass-panel animate-panel-rise flex min-h-[24rem] flex-col overflow-hidden delay-500 xl:min-h-0">
-          <div className="border-b border-white/10 p-4">
-            <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Long-Term Memory</p>
-          </div>
-          <div className="custom-scrollbar flex-1 overflow-y-auto p-4 space-y-3">
-            {history.length === 0 ? (
-              <p className="text-xs font-mono text-slate-600">No saved runs yet.</p>
-            ) : (
-              history.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="cursor-pointer rounded-2xl border border-slate-800/90 bg-slate-950/70 p-3 transition hover:border-purple-300/40"
-                  onClick={() => setPrd(entry.prd)}
-                >
-                  <p className="font-mono text-[0.65rem] text-slate-500">{entry.savedAt}</p>
-                  <p className="mt-1 truncate text-sm text-slate-200">{entry.prd}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {entry.widgets.map((w) => (
-                      <span key={w} className="rounded-full bg-slate-800/90 px-2 py-0.5 text-[0.6rem] font-mono text-teal-300">
-                        {w}
-                      </span>
+            {livePreviewReady && centerTab === 'code' && (
+              exportTree.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-teal-300/20 bg-teal-300/10 text-3xl">⌁</div>
+                  <h2 className="text-lg font-semibold text-slate-200">No production code yet</h2>
+                  <p className="mt-2 max-w-sm text-sm text-slate-500">
+                    Run Generate UI — production code is created from the Stitch live preview.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-3 text-xs text-slate-500">
+                    {previewCode.tree.length > 0 ? 'Derived from Stitch live preview · ' : ''}
+                    {exportTree.length} file{exportTree.length === 1 ? '' : 's'} · copy or download below
+                  </p>
+                  <div className="mb-3 max-h-36 space-y-1.5 overflow-y-auto custom-scrollbar">
+                    {exportTree.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setSelectedWidget(name)}
+                        className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-mono transition ${
+                          selectedWidget === name
+                            ? 'border border-teal-400/60 bg-teal-400/15 text-teal-100'
+                            : 'border border-white/5 bg-slate-950/60 text-slate-300 hover:bg-slate-900/80'
+                        }`}
+                      >
+                        <span className="text-emerald-400">✓</span>
+                        {name}.tsx
+                      </button>
                     ))}
                   </div>
-                </div>
-              ))
+
+                  <CodeExportBar
+                    selectedWidget={selectedWidget}
+                    code={exportComponents[selectedWidget] ?? ''}
+                    allComponents={exportComponents}
+                    prd={prdText}
+                    livePreviewHtml={
+                      stitchPreview.status === 'ready' ? stitchPreview.html : undefined
+                    }
+                  />
+
+                  <div className="custom-scrollbar mt-3 flex-1 overflow-auto">
+                    {selectedWidget && exportComponents[selectedWidget] && (
+                      <>
+                        <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">
+                          {selectedWidget}.tsx
+                        </p>
+                        <pre className="rounded-2xl border border-slate-700/70 bg-slate-950/85 p-4 text-xs font-mono leading-relaxed text-yellow-200 whitespace-pre-wrap shadow-inner">
+                          {exportComponents[selectedWidget]}
+                        </pre>
+                      </>
+                    )}
+                  </div>
+                </>
+              )
+            )}
+            {livePreviewReady && centerTab === 'history' && (
+              <div className="space-y-3">
+                {history.length === 0 ? (
+                  <p className="text-xs font-mono text-slate-600">No saved runs yet.</p>
+                ) : (
+                  history.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="cursor-pointer rounded-2xl border border-slate-800/90 bg-slate-950/70 p-3 transition hover:border-purple-300/40"
+                      onClick={() => setPrd(entry.prd)}
+                    >
+                      <p className="font-mono text-[0.65rem] text-slate-500">{entry.savedAt}</p>
+                      <p className="mt-1 truncate text-sm text-slate-200">{entry.prd}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {entry.widgets.map((w) => (
+                          <span key={w} className="rounded-full bg-slate-800/90 px-2 py-0.5 text-[0.6rem] font-mono text-teal-300">
+                            {w}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </div>
         </section>
+        </div>
+
+        {/* RIGHT HALF — Stitch live preview */}
+        <StitchLivePreview preview={stitchPreview} prdLength={prdText.length} />
       </div>
     </main>
   );

@@ -7,7 +7,7 @@ export function PromptPanel({ prompts }: { prompts: PromptRecord[] }) {
   if (prompts.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-950/50 p-4 text-xs font-mono text-slate-500">
-        Prompts appear here after a pipeline run — Agent 1 schema + Agent 2 per-widget generation.
+        Prompts appear after Generate UI — Stitch live preview prompts first, then agent pipeline prompts.
       </p>
     );
   }
@@ -38,7 +38,11 @@ export function PromptPanel({ prompts }: { prompts: PromptRecord[] }) {
           <summary className="cursor-pointer list-none px-3 py-2.5 font-mono text-xs">
             <span
               className={
-                p.agent === 'AGENT 1' ? 'text-teal-400' : 'text-blue-400'
+                p.agent === 'STITCH'
+                  ? 'text-sky-400'
+                  : p.agent === 'AGENT 1'
+                    ? 'text-teal-400'
+                    : 'text-blue-400'
               }
             >
               {p.agent}
