@@ -171,9 +171,8 @@ function sensorStreamBody(): string {
 }
 
 function genericBody(description: string): string {
-  return `        <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-700 text-sm text-slate-400">
-          ${description.replace(/"/g, '\\"')}
-        </div>`;
+  // Return an empty string or a null component to completely hide skipped widgets
+  return `        {/* Widget Generation Skipped: ${description.replace(/"/g, '&quot;')} */}`;
 }
 
 const WIDGET_TITLES: Record<string, { title: string; subtitle: string }> = {

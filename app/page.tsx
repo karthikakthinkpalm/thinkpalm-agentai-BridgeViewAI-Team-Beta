@@ -15,6 +15,7 @@ import { dedupePreviewWidgets } from '@/lib/preview/curated-widgets';
 import { recommendVisualizations } from '@/lib/tools/visualization-recommender';
 import { VizRecommendationsPanel } from '@/components/viz-recommendations-panel';
 import { FeatureDiscoveryPanel } from '@/components/feature-discovery-panel';
+import { AgentTracePanel } from '@/components/agent-trace-panel';
 import { runFeatureDiscovery } from '@/lib/tools/feature-discovery';
 import type { FeatureDiscoveryResult } from '@/lib/types/feature-discovery';
 import { DEFAULT_PRD_SAMPLE } from '@/lib/input/prd-samples';
@@ -30,16 +31,17 @@ type SchemaSummary = {
   widgets?: string[];
 };
 
-type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview';
-type ThemeId = 'ocean' | 'harbor';
+type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview' | 'trace';
+type ThemeId = 'ocean' | 'harbor' | 'abyss';
 
 export default function Home() {
   const {
     prdText, schema, components, agentLog,
-    status, widgetsFound, prompts, hierarchy, previewWidgets, hiddenWidgets, visualizations,
+    status, widgetsFound, prompts, hierarchy, previewWidgets, hiddenWidgets, fallbackWidgets, visualizations, llmProvider,
+    debugTrace,
     setPrd, setSchema, setStatus, addComponent,
-    addLog, setWidgetsFound, setPrompts, setHierarchy, setPreviewWidgets, setHiddenWidgets,
-    setVisualizations, featureDiscovery, setFeatureDiscovery, reset,
+    addLog, setWidgetsFound, setPrompts, setHierarchy, setPreviewWidgets, setHiddenWidgets, setFallbackWidgets, setLlmProvider,
+    setVisualizations, featureDiscovery, setFeatureDiscovery, setDebugTrace, reset,
   } = useMemory();
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -97,7 +99,13 @@ export default function Home() {
 
   async function runPipeline() {
     if (!prdText.trim()) return;
-    reset();
+    
+    const isContinuing = fallbackWidgets.length > 0;
+    
+    if (!isContinuing) {
+      reset();
+    }
+    
     setStatus('running');
     setCenterTab('memory');
 
@@ -108,7 +116,11 @@ export default function Home() {
       const res = await fetch('/api/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prd: prdText }),
+        body: JSON.stringify({ 
+          prd: prdText, 
+          existingComponents: isContinuing ? components : undefined,
+          llmProvider 
+        }),
       });
 
       const data = await res.json();
@@ -131,6 +143,8 @@ export default function Home() {
         setFeatureDiscovery(data.featureDiscovery);
       }
       setPreviewWidgets(asWidgetArray(data.schema?.widgets, asWidgetArray(data.tree)));
+      setFallbackWidgets(data.fallbackWidgets ?? []);
+      setDebugTrace(data.debugTrace || null);
 
       const trace = (data.agentTrace as { agent: string; status: string; detail: string }[]) ?? [];
       for (const step of trace) {
@@ -185,6 +199,7 @@ export default function Home() {
     { id: 'prompts', label: 'Prompts' },
     { id: 'studio', label: 'Studio' },
     { id: 'preview', label: 'Live Preview' },
+    { id: 'trace', label: 'Trace' },
   ];
 
   const visiblePreviewWidgets = useMemo(() => {
@@ -243,6 +258,37 @@ export default function Home() {
               >
                 Harbor
               </button>
+              <button
+                type="button"
+                onClick={() => setTheme('abyss')}
+                className={`chip px-3 py-1 text-[0.65rem] font-medium transition ${
+                  theme === 'abyss' ? 'bg-[rgb(var(--accent)/0.18)] text-white border-[rgb(var(--accent)/0.25)]' : 'text-slate-300'
+                }`}
+              >
+                Abyss
+              </button>
+            </div>
+            
+            {/* LLM Provider Toggle */}
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-[rgb(var(--surface-2)/0.35)] p-1 ml-2">
+              <button
+                type="button"
+                onClick={() => setLlmProvider('gemini')}
+                className={`chip px-3 py-1 text-[0.65rem] font-medium transition ${
+                  llmProvider === 'gemini' ? 'bg-[rgb(var(--accent)/0.18)] text-white border-[rgb(var(--accent)/0.25)]' : 'text-slate-300'
+                }`}
+              >
+                Gemini (Free)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLlmProvider('groq')}
+                className={`chip px-3 py-1 text-[0.65rem] font-medium transition ${
+                  llmProvider === 'groq' ? 'bg-[rgb(var(--accent)/0.18)] text-white border-[rgb(var(--accent)/0.25)]' : 'text-slate-300'
+                }`}
+              >
+                Groq (Llama 3)
+              </button>
             </div>
 
             <span className="chip flex items-center gap-2 px-3 py-1.5 text-[0.65rem] font-medium">
@@ -290,7 +336,13 @@ export default function Home() {
               className="primary-button group relative mt-3 w-full overflow-hidden rounded-2xl px-4 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <span className="absolute inset-0 -translate-x-full bg-white/20 transition duration-700 group-hover:translate-x-full" />
-              <span className="relative">{status === 'running' ? '⟳ Agents running...' : '⚡ Generate UI'}</span>
+              <span className="relative">
+                {status === 'running'
+                  ? '⟳ Agents running...'
+                  : fallbackWidgets.length > 0
+                  ? '⚡ Generate Remaining Widgets'
+                  : '⚡ Generate UI'}
+              </span>
             </button>
           </div>
 
@@ -413,16 +465,37 @@ export default function Home() {
               />
             )}
             {centerTab === 'preview' && (
-              <>
-                <p className="mb-3 text-xs text-slate-500">
-                  Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
-                </p>
-                <DashboardPreview
-                  widgets={visiblePreviewWidgets}
-                  prd={prdText}
-                  schema={schemaObj}
-                />
-              </>
+              status !== 'done' ? (
+                <div className="flex h-full flex-col items-center justify-center font-mono text-sm text-slate-500 p-8 text-center gap-2">
+                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/20 text-xl">
+                    ⚡
+                  </div>
+                  <p>Live preview will be available after UI generation.</p>
+                  <p className="text-xs text-slate-600">Click "Generate UI" to begin the pipeline.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-3 text-xs text-slate-500">
+                    Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
+                  </p>
+                  <DashboardPreview
+                    widgets={visiblePreviewWidgets}
+                    prd={prdText}
+                    schema={schemaObj}
+                  />
+                </>
+              )
+            )}
+            {centerTab === 'trace' && (
+              <div className="h-full">
+                {debugTrace ? (
+                  <AgentTracePanel trace={debugTrace} />
+                ) : (
+                  <div className="flex h-full items-center justify-center font-mono text-sm text-slate-500">
+                    No trace data available. Run the pipeline first.
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </section>
@@ -470,6 +543,7 @@ export default function Home() {
                 selectedWidget={selectedWidget}
                 code={components[selectedWidget] ?? ''}
                 allComponents={components}
+                prd={prdText}
               />
 
               <div className="custom-scrollbar flex-1 overflow-auto p-4">

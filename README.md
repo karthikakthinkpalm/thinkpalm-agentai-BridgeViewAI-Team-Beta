@@ -26,6 +26,13 @@ Built with Next.js, Groq (Llama 3.x), an **adaptive agent orchestrator**, config
 | **Long-term memory** | Saves runs to IndexedDB (PRD, schema, widgets) |
 | **Themes** | Ocean / Harbor UI themes |
 
+### Recent Architecture Improvements
+
+- **Adaptive Grid Layout:** Uses a responsive 12-column CSS grid (`col-span` dynamically mapped via heuristics in StackBlitz and Live Preview). Automatically constraints generated SVG charts (`min-w-0 overflow-hidden`) to prevent layout blowout.
+- **Robust Visualization Hand-off:** Fixed schema mapping so **Agent 5** properly receives `visualization` and `archetype` instructions from **Agent 3**, resulting in rich custom SVGs instead of standard fallback cards.
+- **Strict Canonical Wireframes:** Removed brittle regex matching from `lib/preview/curated-widgets.ts`. Custom widgets (e.g., `FuelPriceTracker`) no longer incorrectly fallback to hardcoded domains (e.g., `FuelGaugeCards`), ensuring the Live Preview accurately reflects generated vs. standard components.
+- **Unified StackBlitz Preview:** Streamlined UX by consolidating to a single, always-functional "Open in StackBlitz" button in the Export tab. This dynamically injects the true AI-generated React components and extracts the exact PRD dashboard title, providing a 100% accurate, interactive React environment without relying on limited in-browser transpilers.
+
 ---
 
 ## Full application flow

@@ -18,7 +18,7 @@
         "container": "grid grid-cols-2 md:grid-cols-3 gap-4",
         "card": "flex flex-col items-center justify-center rounded-xl bg-slate-800/50 p-4 border border-white/5",
         "label": "text-xs font-medium text-slate-400 uppercase tracking-wider",
-        "value": "mt-2 text-2xl font-bold text-[rgb(var(--accent))]"
+        "value": "mt-2 text-2xl font-bold text-sky-400"
       }
     },
     "alert": {
@@ -59,30 +59,30 @@
         "container": "grid gap-4 sm:grid-cols-2",
         "verticalGauge": "h-36 w-16 rounded-lg border bg-slate-900/80 flex flex-col justify-end",
         "fillBar": "w-full rounded-b-md bg-gradient-to-t from-emerald-500 to-teal-400",
-        "horizontalGauge": "h-2.5 rounded-full bg-slate-800",
-        "sparkline": "inline SVG path for consumption trend"
+        "horizontalGauge": "h-2.5 w-full rounded-full bg-slate-800",
+        "progressIndicator": "h-full rounded-full bg-sky-400"
       }
     },
     "route-map": {
-      "description": "Voyage route map with SVG path, port markers, vessel position, leg timeline.",
+      "description": "Voyage route map with progress markers, vessel position, and leg timeline.",
       "structure": {
-        "mapContainer": "rounded-xl border bg-slate-950/70 overflow-hidden",
-        "svg": "viewBox chart with ocean gradient, land masses, route path",
-        "vesselMarker": "triangle at progress% along bezier path",
-        "legTimeline": "numbered stepper for voyage legs",
-        "progressRing": "SVG circle strokeDasharray for completion %"
+        "mapContainer": "rounded-xl border bg-slate-950/70 p-4",
+        "layout": "flex flex-col gap-4",
+        "vesselMarker": "flex items-center justify-between border-b pb-2",
+        "legTimeline": "flex justify-between text-sm text-slate-400",
+        "progressRing": "rounded-full h-2 w-full bg-slate-800 overflow-hidden"
       }
     },
     "wind-rose": {
-      "description": "Polar wind rose — directional sectors with speed/frequency rings.",
+      "description": "Polar wind rose layout — directional sectors with speed/frequency data.",
       "structure": {
         "container": "flex items-center justify-center rounded-xl border bg-slate-950/70 p-4",
-        "svg": "polar chart with 16 compass sectors, concentric speed rings",
-        "legend": "Beaufort scale color key below chart"
+        "layout": "grid grid-cols-2 gap-4 text-center",
+        "legend": "Beaufort scale text labels"
       }
     },
     "weather-map": {
-      "description": "Route-corridor weather overlay on mini nautical chart.",
+      "description": "Route-corridor weather overlay data.",
       "structure": {
         "mapContainer": "relative rounded-xl border overflow-hidden h-48",
         "layers": "wind arrows, wave height contours, swell direction",
@@ -99,11 +99,11 @@
       }
     },
     "area-chart": {
-      "description": "Stacked or single area chart for temporal trends.",
+      "description": "Bar chart simulating temporal trends using flex columns.",
       "structure": {
-        "container": "rounded-xl border bg-slate-950/70 p-4 h-40",
-        "svg": "area path with gradient fill, axis labels",
-        "crosshair": "hover vertical line with value tooltip"
+        "container": "rounded-xl border bg-slate-950/70 p-4 h-40 flex items-end gap-1",
+        "bar": "w-full bg-sky-500/50 hover:bg-sky-400 transition-colors rounded-t-sm",
+        "label": "text-xs text-slate-500 text-center mt-2"
       }
     },
     "timeline": {
@@ -115,11 +115,12 @@
       }
     },
     "circular-progress": {
-      "description": "SVG ring gauge for tank fill or voyage completion.",
+      "description": "SVG ring gauge using circle and strokeDasharray.",
       "structure": {
-        "ring": "SVG circle strokeDasharray animated fill",
-        "centerLabel": "percentage value in ring center",
-        "sublabel": "days remaining or capacity below"
+        "container": "relative h-32 w-32 flex items-center justify-center",
+        "ring": "SVG circle with strokeDasharray and strokeDashoffset",
+        "centerLabel": "absolute inset-0 flex flex-col items-center justify-center",
+        "sublabel": "text-xs text-slate-400"
       }
     },
     "bullet-chart": {
@@ -132,10 +133,10 @@
       }
     },
     "sparkline": {
-      "description": "Inline SVG sparkline for sensor streams and KPI trends.",
+      "description": "Miniature bar chart simulating a sparkline trend.",
       "structure": {
-        "container": "flex items-end gap-1 h-12",
-        "path": "SVG polyline with gradient area fill",
+        "container": "flex items-end gap-0.5 h-12 w-24",
+        "bar": "flex-1 bg-emerald-500/40 rounded-t-sm",
         "value": "current reading label right-aligned"
       }
     },

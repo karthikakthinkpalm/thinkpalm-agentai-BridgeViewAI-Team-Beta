@@ -42,7 +42,21 @@ export function runAgent3VisualizationSelector(
   const widgetGroups = new Map<string, { metrics: ClassifiedMetric[]; primary: MetricCategory }>();
 
   for (const m of classifiedMetrics) {
-    const widgetName = METRIC_WIDGET_OVERRIDE[m.name] ?? CATEGORY_WIDGET[m.primaryCategory];
+    // Dynamically generate the widget name from the entity (e.g., "berth_management" -> "BerthManagement")
+    let widgetName = '';
+    if (m.entity && m.entity.trim().length > 0) {
+      widgetName = m.entity
+        .split(/[^a-zA-Z0-9]+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join('');
+    }
+
+    // Fallback to hardcoded generics only if no entity was extracted
+    if (!widgetName) {
+      widgetName = METRIC_WIDGET_OVERRIDE[m.name] ?? CATEGORY_WIDGET[m.primaryCategory] ?? 'GenericWidget';
+    }
+
     const existing = widgetGroups.get(widgetName);
     if (existing) {
       existing.metrics.push(m);
@@ -54,12 +68,13 @@ export function runAgent3VisualizationSelector(
   const draftWidgets: SelectedWidget[] = [...widgetGroups.entries()].map(([name, group]) => {
     const avgConf = group.metrics.reduce((s, m) => s + m.confidence, 0) / group.metrics.length;
     const metricNames = group.metrics.map((m) => m.name);
+    const metricDetails = group.metrics.map((m) => m.description).join('; ');
     const context = `${metricNames.join(' ')} ${requirements.domain}`;
     const domain = detectSemanticDomain(context, name);
 
     return {
       name,
-      description: `Monitor ${metricNames.join(', ')} for ${requirements.domain}`,
+      description: `Dashboard widget to display and monitor: ${metricDetails}. Context: ${requirements.userGoal || requirements.domain}.`,
       archetype: 'pending',
       metrics: metricNames,
       visualization: 'pending',

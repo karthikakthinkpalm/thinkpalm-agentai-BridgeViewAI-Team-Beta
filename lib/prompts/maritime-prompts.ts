@@ -59,10 +59,11 @@ OUTPUT RULES (strict):
 - Return ONLY valid JSON. No markdown fences. No explanation.
 - Use exactly this shape:
 ${WIDGET_EXEMPLAR}
-- INVENT appropriate React component names (PascalCase) for "name".
-- Write a clear "description" of what the component should render based on the PRD.
+- INVENT appropriate React component names (PascalCase) for "name". DO NOT use the word "Card" in the name (e.g. use Panel instead).
+- Write a clear "description" of what the component should render based on the PRD. DO NOT use the word "card" in the description.
 - "layout" is one of: dashboard-grid | bridge-split | alert-first
-- "priority" is one of: safety-critical | operational | informational`;
+- "priority" is one of: safety-critical | operational | informational
+- EXTREMELY CRITICAL: The WIDGET_EXEMPLAR above is purely for structural JSON reference. You MUST NOT copy or output the "VoyageProgressTracker" or "FuelGaugePanels" widgets unless the user explicitly asks for them. You MUST generate entirely new, custom widgets based EXCLUSIVELY on the user's PRD!`;
 }
 
 export function buildAgent1UserPrompt(
@@ -97,14 +98,16 @@ const REQUIREMENT_EXEMPLAR = `{
 export function buildAgent1RequirementSystemPrompt(): string {
   return `You are Agent 1: Requirement Analyzer for maritime bridge dashboards.
 
-TASK: Extract entities and metrics from the PRD. Do NOT select widgets or visualizations.
+TASK: Holistically evaluate the PRD to extract its semantic intent, operational domain, urgency, entities, and metrics. Do NOT select widgets or visualizations.
 
 OUTPUT RULES:
-- Return ONLY valid JSON matching this shape:
+- Return ONLY valid JSON matching this exact shape:
 ${REQUIREMENT_EXEMPLAR}
-- "entities": domain nouns (vessel, crew, fuel, navigation, etc.)
-- "metrics": measurable data points with name, description, entity, optional unit
-- "priority": safety-critical | operational | informational`;
+- "domain": Semantically infer the operational domain (e.g., "fleet operations", "cargo vessel monitoring", "passenger ferry", etc.).
+- "priority": Semantically infer the urgency. Must be exactly one of: safety-critical | operational | informational.
+- "userGoal": A short 5-10 word summary of the user's primary objective.
+- "entities": Domain nouns extracted from the context (e.g., vessel, crew, fuel, navigation, weather).
+- "metrics": Measurable data points with name, description, entity, and optional unit.`;
 }
 
 export function buildAgent1RequirementUserPrompt(prd: string, detectedWidgets: string[]): string {
@@ -119,7 +122,7 @@ Extract all entities and metrics. Return JSON only.`;
 }
 
 export function buildAgent5SystemPrompt(): string {
-  return `You are a senior React engineer and UI designer specializing in sleek, modern maritime bridge dashboards.
+  return `You are a senior React engineer and UI designer specializing in sleek, modern operational dashboards.
 
 TASK: Generate ONE production-ready React functional component.
 
@@ -127,19 +130,33 @@ REQUIREMENTS:
 - TypeScript + Tailwind CSS only (utility classes).
 - Apply the design system structure JSON provided in the user message for widget internals (Tailwind class names and layout hierarchy).
 - You MUST wrap the entire component in this exact CardShell markup for visual consistency:
-  <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-[rgb(var(--border)/0.14)] bg-[rgb(var(--surface)/0.55)] p-5 shadow-lg shadow-black/30">
+  <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-slate-700/50 bg-slate-900/55 p-5 shadow-lg shadow-black/30">
     <div className="mb-4 border-b border-white/5 pb-3">
-      <h3 className="text-base font-semibold text-[rgb(var(--accent)/0.95)]">Widget Title</h3>
-      <p className="mt-0.5 text-sm text-slate-400">Optional Subtitle / Vessel Name</p>
+      <h3 className="text-base font-semibold text-sky-400">Widget Title</h3>
+      <p className="mt-0.5 text-sm text-slate-400">Optional Subtitle / Context</p>
     </div>
     <div className="flex-1">
       {/* Apply the design system structure here */}
     </div>
   </div>
-- Use beautiful modern UI techniques: glassmorphism (bg-opacity/backdrop-blur), rounded-lg containers, subtle borders (border-white/5), and gradients.
-- Typography: Use font-semibold for values, text-sm text-slate-400 for labels.
+- Use beautiful modern UI techniques matching the curated theme: \`bg-slate-950/60\` or \`bg-slate-900/50\` for inner containers, \`border-white/5\` for subtle borders.
+- Typography: Use \`font-semibold text-slate-100\` for values, \`text-xs uppercase tracking-wider text-slate-500\` for labels. Use \`sky-400\`, \`cyan-400\`, or \`emerald-400\` for accents and gradients.
 - Tables: Use border-collapse, subtle borders between rows, text-left, text-sm.
-- CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data (vessel name, coordinates, percentages, crew names) directly inside the component using variables or state. Do not use \`({ data })\` or expect data from a parent.
+- CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data directly inside the component using variables or state. Make sure the hardcoded data exactly matches the domain context of the requested widget. Do not use \`({ data })\` or expect data from a parent.
+- CRITICAL REACT SYNTAX RULES:
+  - All adjacent JSX elements MUST be wrapped in an enclosing tag or fragment \`<></>\`. Do not return multiple root elements.
+  - Ensure all ternary operators are complete (e.g., \`cond ? a : b\`). Never leave a nested ternary without a final fallback value.
+- CRITICAL CSS & SVG RULES:
+  - CRITICAL: NEVER use \`fixed\` positioning, \`w-screen\`, or \`h-screen\` for overlays or backgrounds. It will break out of the dashboard grid and ruin the entire page. Only use \`absolute\`, and ensure the parent has \`relative\`.
+  - DO NOT use raw \`<path>\` elements to draw complex custom vector icons (like engines, anchors, or ships). Use standard emoji or text abbreviations instead.
+  - When drawing mathematical SVGs (like scatter plots), ensure coordinates (\`cx\`, \`cy\`, \`r\`) are scaled proportionally to a 100x100 viewBox. DO NOT hardcode massive fixed radiuses (like \`r={80}\`) that bleed out of the box.
+  - You MAY use simple SVG geometry (like \`<circle>\` or \`<rect>\`) to build beautiful circular gauges, donut charts, scatter plots, or route maps. Use \`strokeDasharray\` and \`strokeDashoffset\` for circular progress.
+  - If you use an SVG for a gauge, place it in a constrained container (e.g., \`relative h-24 w-24\`) and set the \`<svg>\` to \`-rotate-90\` to start at the top. CRITICAL: NEVER put \`<text>\` inside a rotated \`<svg>\`, or the text will be sideways! Put the text in an overlay \`div\` (e.g., \`absolute inset-0 flex items-center justify-center\`).
+  - NEVER use \`vh\` or \`vw\` units for height/width calculations inside components, as this will break out of the container. Use \`%\` instead (e.g., \`height: \${value}%\`).
+  - Do not attempt to draw decorative SVG corners or custom borders. Stick to Tailwind \`rounded-xl border\`.
+  - Avoid using excessively large text sizes (like \`text-5xl\`) that will overflow cards. Use \`text-2xl\` max.
+  - Never allow text to overlap other elements. You MUST use \`truncate\` or \`min-w-0\` on text containers inside flexbox layouts to ensure they don't bleed into neighbors.
+  - Adapt background colors to the current theme. Unless explicitly rendering a light-themed dashboard, DO NOT use \`bg-white\` for large containers. Default to dark variants like \`bg-slate-900/50\`, \`bg-slate-800/40\`, etc.
 - Accessible: semantic HTML, aria-labels on interactive elements.
 - Export as default export named function matching the widget.
 - Self-contained: only import React from 'react'.
@@ -188,19 +205,24 @@ REQUIREMENTS:
 - TypeScript + Tailwind CSS only (utility classes).
 - CRITICAL: You have access to a tool named \`get_design_system_template\`. Call it with a widget archetype (e.g. 'table', 'kpi', 'alert', 'list', 'card') to get the exact Tailwind structural JSON for the widget internals.
 - You MUST wrap the entire component in this exact CardShell markup for visual consistency:
-  <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-[rgb(var(--border)/0.14)] bg-[rgb(var(--surface)/0.55)] p-5 shadow-lg shadow-black/30">
+  <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-slate-700/50 bg-slate-900/55 p-5 shadow-lg shadow-black/30">
     <div className="mb-4 border-b border-white/5 pb-3">
-      <h3 className="text-base font-semibold text-[rgb(var(--accent)/0.95)]">Widget Title</h3>
+      <h3 className="text-base font-semibold text-sky-400">Widget Title</h3>
       <p className="mt-0.5 text-sm text-slate-400">Optional Subtitle / Vessel Name</p>
     </div>
     <div className="flex-1">
       {/* Apply the structure retrieved from get_design_system_template here */}
     </div>
   </div>
-- Use beautiful modern UI techniques: glassmorphism (bg-opacity/backdrop-blur), rounded-lg containers, subtle borders (border-white/5), and gradients.
-- Typography: Use font-semibold for values, text-sm text-slate-400 for labels.
+- Use beautiful modern UI techniques matching the curated theme: \`bg-slate-950/60\` or \`bg-slate-900/50\` for inner containers, \`border-white/5\` for subtle borders.
+- Typography: Use \`font-semibold text-slate-100\` for values, \`text-xs uppercase tracking-wider text-slate-500\` for labels. Use \`sky-400\`, \`cyan-400\`, or \`emerald-400\` for accents and gradients.
 - Tables: Use border-collapse, subtle borders between rows, text-left, text-sm.
 - CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data (vessel name, coordinates, percentages, crew names) directly inside the component using variables or state. Do not use \`({ data })\` or expect data from a parent.
+- CRITICAL CSS & SVG RULES:
+  - DO NOT use \`absolute\` positioning to layer text over SVGs. Use standard Flexbox/Grid for layout.
+  - If you use SVG, you MUST place it in a constrained container (e.g., \`h-32 w-full\`) and set the \`<svg>\` to \`h-full w-full\`. Do not let SVGs scale infinitely.
+  - Avoid using excessively large text sizes (like \`text-5xl\`) that will overflow cards.
+  - Never allow text to overlap other elements. Use semantic gaps (\`gap-4\`) and padding.
 - Accessible: semantic HTML, aria-labels on interactive elements.
 - Export as default export named function matching the widget.
 - Self-contained: only import React from 'react'.

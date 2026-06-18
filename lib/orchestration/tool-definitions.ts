@@ -15,9 +15,9 @@ export function registerPipelineTools(): void {
       },
       required: ['text'],
     },
-    async run(args) {
+    async run(args, ctx) {
       const text = String(args.text ?? '');
-      const { widgets, source } = await mapWidgetsAsync(text);
+      const { widgets, source } = await mapWidgetsAsync(text, ctx.llmProvider);
       return { widgets, source };
     },
   });
@@ -34,7 +34,7 @@ export function registerPipelineTools(): void {
     },
     async run(args, ctx) {
       const prd = String(args.prd ?? ctx.prd);
-      const analysis = await recommendVisualizationsAsync(prd);
+      const analysis = await recommendVisualizationsAsync(prd, ctx.llmProvider);
       ctx.visualizationAnalysis = analysis;
       return {
         recommendationCount: analysis.recommendations.length,

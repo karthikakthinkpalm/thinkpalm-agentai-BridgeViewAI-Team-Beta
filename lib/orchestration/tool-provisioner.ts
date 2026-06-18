@@ -2,7 +2,7 @@ import 'server-only';
 
 import toolCatalog from '@/config/maritime/tool-catalog.json';
 import type { RequirementAnalysis } from '@/lib/types/pipeline';
-import { createChatCompletion } from '@/lib/groq-chat';
+import { createChatCompletion } from '@/lib/llm-router';
 import { parseJsonFromLlm } from '@/lib/parse-llm-json';
 import { matchesAnyPattern } from '@/lib/tools/config-loader';
 import { getAllTools, getTool, registerDynamicTool } from './registry';
@@ -48,7 +48,8 @@ function registerFromTemplate(template: CatalogTemplate, reason: string): Provis
 async function llmSuggestTools(
   prd: string,
   requirements: RequirementAnalysis,
-  existingToolIds: string[]
+  existingToolIds: string[],
+  provider?: 'groq' | 'gemini'
 ): Promise<{ id: string; delegateTo: string; description: string; reason: string }[]> {
   const catalogIds = (toolCatalog.templates as CatalogTemplate[]).map((t) => t.id);
   const baseTools = ['map_widgets', 'recommend_visualizations', 'feature_discovery', 'get_design_system_template'];
@@ -74,7 +75,8 @@ Rules:
         },
       ],
     },
-    'ToolProvisioner'
+    'ToolProvisioner',
+    { provider }
   );
 
   const parsed = parseJsonFromLlm<{
@@ -119,7 +121,8 @@ function registerLlmTool(
 export async function provisionToolsForPrd(
   prd: string,
   requirements: RequirementAnalysis,
-  plan: AdaptivePipelinePlan
+  plan: AdaptivePipelinePlan,
+  provider?: 'groq' | 'gemini'
 ): Promise<{ added: ProvisionedTool[]; plan: AdaptivePipelinePlan }> {
   const text = `${prd}\n${requirements.domain}\n${requirements.metrics.map((m) => `${m.name} ${m.description}`).join('\n')}`;
   const added: ProvisionedTool[] = [];
@@ -151,7 +154,7 @@ export async function provisionToolsForPrd(
 
   if (process.env.GROQ_API_KEY && process.env.DISABLE_TOOL_PROVISIONER_LLM !== 'true') {
     try {
-      const suggestions = await llmSuggestTools(prd, requirements, [...toolSet, ...getAllTools().map((t) => t.id)]);
+      const suggestions = await llmSuggestTools(prd, requirements, [...toolSet, ...getAllTools().map((t) => t.id)], provider);
       for (const spec of suggestions) {
         if (toolSet.has(spec.id)) continue;
         const provisioned = registerLlmTool(spec);

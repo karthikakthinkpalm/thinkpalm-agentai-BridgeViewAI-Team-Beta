@@ -1,16 +1,16 @@
 import 'server-only';
 
-import { createChatCompletion } from '@/lib/groq-chat';
+import { createChatCompletion } from '@/lib/llm-router';
 import { parseJsonFromLlm } from '@/lib/parse-llm-json';
 import type { FeatureRecommendation } from '@/lib/types/feature-discovery';
 import type { VisualizationPriority, VisualizationRecommendation } from '@/lib/types/visualization';
 import { getWidgetDesignSystemConfig, getWidgetMapperConfig } from './config-loader';
 
-function isLlmEnabled(): boolean {
+export function isLlmEnabled(): boolean {
   return Boolean(process.env.GROQ_API_KEY) && process.env.DISABLE_LLM_TOOL_FALLBACK !== 'true';
 }
 
-export async function llmMapWidgets(text: string): Promise<string[]> {
+export async function llmMapWidgets(text: string, provider?: 'groq' | 'gemini'): Promise<string[]> {
   const catalog = getWidgetMapperConfig().allWidgets;
   const { response } = await createChatCompletion(
     {
@@ -23,7 +23,8 @@ export async function llmMapWidgets(text: string): Promise<string[]> {
         { role: 'user', content: text.slice(0, 4000) },
       ],
     },
-    'llmMapWidgets'
+    'llmMapWidgets',
+    { provider }
   );
 
   const parsed = parseJsonFromLlm<{ widgets?: string[] }>(response.choices[0]?.message?.content ?? '');
@@ -33,7 +34,8 @@ export async function llmMapWidgets(text: string): Promise<string[]> {
 
 export async function llmRecommendVisualizations(
   prd: string,
-  priority: VisualizationPriority
+  priority: VisualizationPriority,
+  provider?: 'groq' | 'gemini'
 ): Promise<VisualizationRecommendation[]> {
   const { response } = await createChatCompletion(
     {
@@ -49,7 +51,8 @@ Priority must be one of: safety-critical, operational, informational. Default se
         { role: 'user', content: prd.slice(0, 6000) },
       ],
     },
-    'llmRecommendVisualizations'
+    'llmRecommendVisualizations',
+    { provider }
   );
 
   const parsed = parseJsonFromLlm<{ recommendations?: VisualizationRecommendation[] }>(
@@ -58,7 +61,7 @@ Priority must be one of: safety-critical, operational, informational. Default se
   return parsed?.recommendations ?? [];
 }
 
-export async function llmDesignSystemTemplate(archetype: string): Promise<string> {
+export async function llmDesignSystemTemplate(archetype: string, provider?: 'groq' | 'gemini'): Promise<string> {
   const known = Object.keys(getWidgetDesignSystemConfig());
   const { response } = await createChatCompletion(
     {
@@ -73,7 +76,8 @@ Known archetypes for reference: ${known.join(', ')}`,
         { role: 'user', content: `Create a design template for archetype: ${archetype}` },
       ],
     },
-    'llmDesignSystemTemplate'
+    'llmDesignSystemTemplate',
+    { provider }
   );
 
   const parsed = parseJsonFromLlm<{ description?: string; structure?: Record<string, string> }>(
@@ -93,7 +97,10 @@ Known archetypes for reference: ${known.join(', ')}`,
 
 export async function llmFeatureRecommendations(
   prd: string,
-  missingDomains: string[]
+  missingDomains: string[],
+  domainContext?: string,
+  configRecs?: FeatureRecommendation[],
+  provider?: 'groq' | 'gemini'
 ): Promise<FeatureRecommendation[]> {
   const { response } = await createChatCompletion(
     {
@@ -103,7 +110,9 @@ export async function llmFeatureRecommendations(
           role: 'system',
           content: `You recommend missing maritime dashboard features. Respond with JSON:
 { "recommendations": [{ "feature", "widget", "domain", "businessValue", "priority", "confidence", "reason" }] }
-priority: critical|high|medium. confidence: 0-1. domain: Navigation|Weather|Machinery|Safety|Compliance|Crew|Cargo|Fleet|Security|Sustainability`,
+priority: critical|high|medium. confidence: 0-1. domain: Navigation|Weather|Machinery|Safety|Compliance|Crew|Cargo|Fleet|Security|Sustainability
+Context domain: ${domainContext ?? 'Unknown'}
+Config recommendations: ${JSON.stringify(configRecs ?? [])}`,
         },
         {
           role: 'user',
@@ -111,7 +120,8 @@ priority: critical|high|medium. confidence: 0-1. domain: Navigation|Weather|Mach
         },
       ],
     },
-    'llmFeatureRecommendations'
+    'llmFeatureRecommendations',
+    { provider }
   );
 
   const parsed = parseJsonFromLlm<{ recommendations?: FeatureRecommendation[] }>(

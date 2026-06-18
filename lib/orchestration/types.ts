@@ -35,6 +35,7 @@ export interface AdaptivePipelinePlan {
 
 export interface PipelineContext {
   prd: string;
+  llmProvider?: 'groq' | 'gemini';
   plan?: AdaptivePipelinePlan;
   provisionedTools?: ProvisionedTool[];
   requirements?: RequirementAnalysis;

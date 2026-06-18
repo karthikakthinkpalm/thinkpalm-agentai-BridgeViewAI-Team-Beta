@@ -8,15 +8,18 @@ import {
   downloadWithIndex,
   productionizeComponent,
 } from '@/lib/export/code-export';
+import { openStackBlitz } from '@/lib/preview/stackblitz-builder';
 
 export function CodeExportBar({
   selectedWidget,
   code,
   allComponents,
+  prd,
 }: {
   selectedWidget: string;
   code: string;
   allComponents: Record<string, string>;
+  prd: string;
 }) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'ok' | 'fail'>('idle');
   const count = Object.keys(allComponents).length;
@@ -61,6 +64,13 @@ export function CodeExportBar({
             className="rounded-xl border border-purple-400/30 bg-purple-400/10 px-3 py-1.5 font-mono text-[0.65rem] text-purple-200 transition hover:bg-purple-400/20"
           >
             ↓ Bundle + index
+          </button>
+          <button
+            type="button"
+            onClick={() => openStackBlitz(allComponents, Object.keys(allComponents), prd)}
+            className="rounded-xl border border-orange-400/30 bg-orange-400/10 px-3 py-1.5 font-mono text-[0.65rem] text-orange-200 transition hover:bg-orange-400/20"
+          >
+            ↗ Open in StackBlitz
           </button>
         </>
       )}

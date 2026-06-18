@@ -17,13 +17,12 @@ export async function runBridgeViewIntelligence(
   prd: string,
   requirements: RequirementAnalysis,
   selectedWidgets: SelectedWidget[],
-  dataset?: Record<string, unknown>
+  provider?: 'groq' | 'gemini'
 ): Promise<BridgeViewIntelligenceResult> {
   const discovery = await runFeatureDiscoveryAsync(prd, {
     requirements,
     selectedWidgets,
-    dataset,
-  });
+  }, provider);
 
   const allRecommendations = [
     ...discovery.dashboardHealth.recommendedFeatures,
