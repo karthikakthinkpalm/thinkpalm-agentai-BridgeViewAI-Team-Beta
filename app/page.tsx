@@ -482,6 +482,7 @@ export default function Home() {
                     widgets={visiblePreviewWidgets}
                     prd={prdText}
                     schema={schemaObj}
+                    components={components}
                   />
                 </>
               )

@@ -103,7 +103,11 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema, provider?: '
       preferredModel = model;
 
       const code = response.choices[0]?.message?.content || '';
-      const clean = code.replace(/```(?:typescript|tsx|ts|jsx)?|```/g, '').trim();
+      let clean = code.replace(/```(?:typescript|tsx|ts|jsx)?|```/g, '').trim();
+      
+      // Failsafe: Strip any imports that are NOT importing 'react' to prevent Vite/Babel sandbox crashes
+      clean = clean.replace(/^import\s+.*?(?:from\s+)?['"](?!react(?:$|['"])).*?['"];?\s*$/gm, '');
+      
       if (!clean) throw new Error('Empty LLM response');
       registerComponent(widget.name, clean);
       generated[widget.name] = clean;
