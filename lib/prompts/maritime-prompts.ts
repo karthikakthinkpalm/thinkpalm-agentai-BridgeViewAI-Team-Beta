@@ -129,7 +129,10 @@ TASK: Generate ONE production-ready React functional component.
 REQUIREMENTS:
 - TypeScript + Tailwind CSS only (utility classes).
 - Apply the design system structure JSON provided in the user message for widget internals (Tailwind class names and layout hierarchy).
-- You MUST wrap the entire component in this exact CardShell markup for visual consistency:
+- CRITICAL IMPORT RULES:
+  - You are running in a restricted sandbox. You MUST NOT import ANY external components, wrappers, or icons (e.g. no \`import { CardShell }\`).
+  - You MUST write raw inline HTML/Tailwind for everything.
+  - You MUST manually inline this exact wrapper markup instead of importing a CardShell component:
   <div className="flex min-h-[260px] w-full flex-col rounded-2xl border border-slate-700/50 bg-slate-900/55 p-5 shadow-lg shadow-black/30">
     <div className="mb-4 border-b border-white/5 pb-3">
       <h3 className="text-base font-semibold text-sky-400">Widget Title</h3>

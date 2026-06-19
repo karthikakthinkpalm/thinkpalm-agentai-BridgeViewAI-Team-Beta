@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
+    "@babel/standalone": "^8.0.2",
     "@google/genai": "^2.8.0",
     "@stackblitz/sdk": "^1.11.0",
     "groq-sdk": "^1.2.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/babel__standalone": "^7.1.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

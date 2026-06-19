@@ -8,6 +8,7 @@ import {
   pickCuratedPreview,
   shouldUseCuratedPreview,
 } from './curated-widgets';
+import { BabelWidgetPreview } from './babel-renderer';
 import { FuelGaugeVisual } from './fuel-gauge-visual';
 import { VoyageRouteVisual } from './voyage-route-visual';
 import { CrewStatusVisual } from './crew-status-visual';
@@ -225,8 +226,8 @@ function GenericWidgetPreview({ name }: { name: string }) {
   const { title, subtitle } = widgetMeta(name, d);
   return (
     <CardShell title={title} subtitle={subtitle}>
-      <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-[rgb(var(--accent)/0.3)] bg-[rgb(var(--accent)/0.05)] p-4 text-center">
-        <svg className="mb-2 h-6 w-6 text-[rgb(var(--accent)/0.7)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex flex-1 py-6 flex-col items-center justify-center rounded-xl border border-dashed border-[rgb(var(--accent)/0.3)] bg-[rgb(var(--accent)/0.05)] p-4 text-center">
+        <svg className="mb-2 h-6 w-6 text-[rgb(var(--accent)/0.7)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
         </svg>
         <p className="text-sm font-semibold text-slate-200">Custom AI Widget Generated!</p>
@@ -273,8 +274,14 @@ export function WidgetPreview({ widgetName }: { widgetName: string }) {
 function DashboardPreviewInner({ widgets, components, prd }: { widgets: string[]; components?: Record<string, string>; prd: string }) {
   const d = usePreviewData();
   const uniqueWidgets = dedupePreviewWidgets(widgets);
+  
+  // If the AI has successfully generated components, use the exact generated component list (just like StackBlitz does).
+  // Otherwise, fall back to the keywords detected from the PRD schema.
+  const displayWidgets = components && Object.keys(components).length > 0 
+    ? Object.keys(components) 
+    : uniqueWidgets;
 
-  if (uniqueWidgets.length === 0) {
+  if (displayWidgets.length === 0) {
     return (
       <div className="flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-700/80 bg-slate-950/40 p-8 text-center">
         <p className="text-sm text-slate-400">Add widgets to your spec to see a live preview</p>
@@ -294,12 +301,33 @@ function DashboardPreviewInner({ widgets, components, prd }: { widgets: string[]
         </div>
 
       </div>
-      <div className="columns-1 xl:columns-2 2xl:columns-3 gap-6">
-        {uniqueWidgets.map((w) => (
-          <div key={w} className="break-inside-avoid mb-6 flex flex-col min-w-0 overflow-hidden">
-            <WidgetPreview widgetName={w} />
-          </div>
-        ))}
+      <div className="columns-1 2xl:columns-2 gap-6">
+        {displayWidgets.map((w) => {
+          let codeStr = components?.[w];
+          if (!codeStr && components) {
+            const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const match = Object.keys(components).find((k) => {
+              const cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return (
+                cleanK === cleanW ||
+                cleanK === `${cleanW}widget` ||
+                cleanK.includes(cleanW) ||
+                cleanW.includes(cleanK)
+              );
+            });
+            if (match) codeStr = components[match];
+          }
+
+          return (
+            <div key={w} className="break-inside-avoid mb-6 flex flex-col overflow-hidden">
+              {codeStr ? (
+                <BabelWidgetPreview code={codeStr} widgetName={w} />
+              ) : (
+                <WidgetPreview widgetName={w} />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

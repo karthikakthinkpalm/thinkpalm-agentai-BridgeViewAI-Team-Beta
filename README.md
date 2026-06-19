@@ -32,6 +32,7 @@ Built with Next.js, Groq (Llama 3.x), an **adaptive agent orchestrator**, config
 - **Robust Visualization Hand-off:** Fixed schema mapping so **Agent 5** properly receives `visualization` and `archetype` instructions from **Agent 3**, resulting in rich custom SVGs instead of standard fallback cards.
 - **Strict Canonical Wireframes:** Removed brittle regex matching from `lib/preview/curated-widgets.ts`. Custom widgets (e.g., `FuelPriceTracker`) no longer incorrectly fallback to hardcoded domains (e.g., `FuelGaugeCards`), ensuring the Live Preview accurately reflects generated vs. standard components.
 - **Unified StackBlitz Preview:** Streamlined UX by consolidating to a single, always-functional "Open in StackBlitz" button in the Export tab. This dynamically injects the true AI-generated React components and extracts the exact PRD dashboard title, providing a 100% accurate, interactive React environment without relying on limited in-browser transpilers.
+- **Native Babel Live Preview Sandbox:** Built a secure in-browser execution sandbox (`@babel/standalone` + `new Function`) that dynamically compiles AI-generated React TSX code into the Live Preview tab. Configured with forced CommonJS modules, classic JSX runtime, and a regex import-scrubber to prevent Vite and module resolution crashes caused by AI hallucinations.
 
 ---
 
