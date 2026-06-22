@@ -107,7 +107,7 @@ export default function Home() {
     }
     
     setStatus('running');
-    setCenterTab('memory');
+    setCenterTab('preview');
 
     addLog('SYSTEM', '7-agent pipeline started');
     addLog('AGENT 1', 'Requirement Analyzer — extracting entities and metrics...');

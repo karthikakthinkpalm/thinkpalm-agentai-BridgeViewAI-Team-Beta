@@ -166,7 +166,8 @@
   ],
   "vesselTypeRules": [
     { "pattern": "\\blng\\s+carrier\\b|\\blng\\s+pioneer\\b|\\bboil.?off\\b|\\bcryogenic\\b", "type": "LNG Carrier" },
-    { "pattern": "\\bpassenger\\s+ferry\\b|\\bferry\\b|\\bmuster\\b|\\bpassenger\\s+count\\b", "type": "Passenger Ferry" },
+    { "pattern": "\\boffshore\\b|\\bdrilling\\s+rig\\b|\\boil\\s+&\\s+gas\\b|\\bplatform\\b", "type": "Offshore Platform" },
+    { "pattern": "\\bpassenger\\s+ferry\\b|\\bferry\\b|\\bpassenger\\s+count\\b|\\bpassengers\\b", "type": "Passenger Ferry" },
     { "pattern": "\\bcontainer\\s+vessel\\b|\\bcontainer\\s+ship\\b|\\bteu\\b|\\bcontainer\\s+utilization\\b", "type": "Container Vessel" },
     { "pattern": "\\btanker\\b|\\bcrude\\b|\\bproduct\\s+tanker\\b", "type": "Tanker" },
     { "pattern": "\\bbulk\\s+carrier\\b|\\bbulk\\s+vessel\\b", "type": "Bulk Carrier" }
@@ -177,6 +178,11 @@
       { "feature": "Cargo Temperature Monitoring", "widget": "SensorStreamPanel", "domain": "Cargo", "businessValue": "Cargo temperature drift indicates boil-off or insulation failure", "priority": "critical", "confidence": 0.93, "reason": "LNG cargo temperature is a primary operational KPI for LNG carriers" },
       { "feature": "Boil-Off Gas Monitoring", "widget": "SensorStreamPanel", "domain": "Sustainability", "businessValue": "BOG rate drives fuel planning and emissions reporting", "priority": "high", "confidence": 0.91, "reason": "LNG carriers must track boil-off gas for voyage economics and safety" },
       { "feature": "Gas Leak Detection Panel", "widget": "AlertPanel", "domain": "Safety", "businessValue": "Early gas leak detection prevents catastrophic cargo incidents", "priority": "critical", "confidence": 0.96, "reason": "LNG operations mandate gas detection alerting on the bridge" }
+    ],
+    "Offshore Platform": [
+      { "feature": "Personnel Onboard (POB) Tracker", "widget": "CrewCertificationStatus", "domain": "Crew", "businessValue": "Real-time POB tracking is mandatory for offshore rig safety and evacuation.", "priority": "critical", "confidence": 0.95, "reason": "Offshore operations require strict monitoring of personnel on board (POB)." },
+      { "feature": "Production KPI Dashboard", "widget": "KPIDashboard", "domain": "OperationalKPI", "businessValue": "Continuous monitoring of oil/gas output ensures operational targets are met.", "priority": "high", "confidence": 0.92, "reason": "Production rates are the primary operational metrics for offshore platforms." },
+      { "feature": "Permit-to-Work (PTW) Monitor", "widget": "AlertPanel", "domain": "Safety", "businessValue": "Tracking active work permits reduces simultaneous operations (SIMOPS) risks.", "priority": "high", "confidence": 0.89, "reason": "Complex rig maintenance requires PTW oversight." }
     ],
     "Passenger Ferry": [
       { "feature": "Passenger Count Dashboard", "widget": "KPIDashboard", "domain": "Cargo", "businessValue": "Accurate passenger count supports SOLAS compliance and evacuation planning", "priority": "critical", "confidence": 0.92, "reason": "Passenger ferries require real-time occupancy monitoring" },
