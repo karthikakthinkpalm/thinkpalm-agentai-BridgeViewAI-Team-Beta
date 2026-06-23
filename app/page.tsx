@@ -31,7 +31,7 @@ type SchemaSummary = {
   widgets?: string[];
 };
 
-type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview' | 'trace';
+type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview' | 'trace' | 'history';
 type ThemeId = 'ocean' | 'harbor' | 'abyss';
 
 export default function Home() {
@@ -200,6 +200,7 @@ export default function Home() {
     { id: 'studio', label: 'Studio' },
     { id: 'preview', label: 'Live Preview' },
     { id: 'trace', label: 'Trace' },
+    { id: 'history', label: 'History' },
   ];
 
   const visiblePreviewWidgets = useMemo(() => {
@@ -311,7 +312,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[minmax(280px,0.85fr)_minmax(340px,1fr)_minmax(320px,1fr)_minmax(300px,0.9fr)] xl:overflow-hidden">
+      <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[3fr_5fr_2fr] xl:overflow-hidden">
 
         {/* LEFT — Spec input */}
         <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden xl:min-h-0">
@@ -498,6 +499,31 @@ export default function Home() {
                 )}
               </div>
             )}
+            {centerTab === 'history' && (
+              <div className="h-full space-y-3">
+                {history.length === 0 ? (
+                  <p className="text-xs font-mono text-slate-600">No saved runs yet.</p>
+                ) : (
+                  history.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="cursor-pointer rounded-2xl border border-slate-800/90 bg-slate-950/70 p-3 transition hover:border-purple-300/40"
+                      onClick={() => setPrd(entry.prd)}
+                    >
+                      <p className="font-mono text-[0.65rem] text-slate-500">{entry.savedAt}</p>
+                      <p className="mt-1 truncate text-sm text-slate-200">{entry.prd}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {entry.widgets.map((w) => (
+                          <span key={w} className="rounded-full bg-slate-800/90 px-2 py-0.5 text-[0.6rem] font-mono text-teal-300">
+                            {w}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -563,35 +589,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* HISTORY */}
-        <section className="glass-panel animate-panel-rise flex min-h-[24rem] flex-col overflow-hidden delay-500 xl:min-h-0">
-          <div className="border-b border-white/10 p-4">
-            <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Long-Term Memory</p>
-          </div>
-          <div className="custom-scrollbar flex-1 overflow-y-auto p-4 space-y-3">
-            {history.length === 0 ? (
-              <p className="text-xs font-mono text-slate-600">No saved runs yet.</p>
-            ) : (
-              history.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="cursor-pointer rounded-2xl border border-slate-800/90 bg-slate-950/70 p-3 transition hover:border-purple-300/40"
-                  onClick={() => setPrd(entry.prd)}
-                >
-                  <p className="font-mono text-[0.65rem] text-slate-500">{entry.savedAt}</p>
-                  <p className="mt-1 truncate text-sm text-slate-200">{entry.prd}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {entry.widgets.map((w) => (
-                      <span key={w} className="rounded-full bg-slate-800/90 px-2 py-0.5 text-[0.6rem] font-mono text-teal-300">
-                        {w}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+
       </div>
     </main>
   );
