@@ -339,16 +339,19 @@ npm install
 
 ### Environment
 
-Create `.env.local` in the project root:
+An example environment file is provided. Copy it to create your local environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then, open `.env.local` and add your actual API keys:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 
-# Optional
-DISABLE_LLM_TOOL_FALLBACK=true          # Config-only tools on server
-DISABLE_ADAPTIVE_LLM_PLANNER=true       # Config-only pipeline planning
-DISABLE_TOOL_PROVISIONER_LLM=true       # Catalog-only tool provisioning (no Groq)
-GROQ_MODEL_FALLBACK_CHAIN=model-a,model-b
+# Optional overrides...
 ```
 
 ### Run locally
