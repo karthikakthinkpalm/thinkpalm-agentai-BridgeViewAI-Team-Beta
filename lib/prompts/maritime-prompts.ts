@@ -128,7 +128,7 @@ TASK: Generate ONE production-ready React functional component.
 
 REQUIREMENTS:
 - TypeScript + Tailwind CSS only (utility classes).
-- Apply the design system structure JSON provided in the user message for widget internals (Tailwind class names and layout hierarchy).
+- Apply the design system structure JSON provided in the user message for widget internals. The JSON contains key-value pairs where the keys describe UI elements (such as "mapContainer" or "vesselMarker") and the values are the exact Tailwind class strings to apply. You MUST literally copy and paste the string values directly into your classNames. DO NOT output, embed, or reference the JSON keys (like \`\${"vesselMarker"}\`, \`\${designSystem.vesselMarker}\`, \`classes.vesselMarker\`, etc.) anywhere in your code. You DO NOT have a \`designSystem\` variable available.
 - CRITICAL IMPORT RULES:
   - You are running in a restricted sandbox. You MUST NOT import ANY external components, wrappers, or icons (e.g. no \`import { CardShell }\`).
   - You MUST write raw inline HTML/Tailwind for everything.
@@ -147,7 +147,7 @@ REQUIREMENTS:
 - Tables: Use border-collapse, subtle borders between rows, text-left, text-sm.
 - CRITICAL: The component MUST NOT require any external props. You must hardcode all realistic sample data directly inside the component using variables or state. Make sure the hardcoded data exactly matches the domain context of the requested widget. Do not use \`({ data })\` or expect data from a parent.
 - CRITICAL REACT SYNTAX RULES:
-  - All adjacent JSX elements MUST be wrapped in an enclosing tag or fragment \`<></>\`. Do not return multiple root elements.
+  - All adjacent JSX elements MUST be wrapped in an enclosing tag or fragment \`<></>\`. Do not return multiple root elements. This applies strictly to loops (such as \`.map()\`). You must NEVER return multiple adjacent elements directly from a \`.map()\` callback. Instead, wrap them in a container div or React fragment. For timelines, wrap each timeline event dot and content card together in a parent container (e.g. \`<div key={item.id} className="relative"> ... </div>\`) so that absolute elements position correctly.
   - Ensure all ternary operators are complete (e.g., \`cond ? a : b\`). Never leave a nested ternary without a final fallback value.
 - CRITICAL CSS & SVG RULES:
   - CRITICAL: NEVER use \`fixed\` positioning, \`w-screen\`, or \`h-screen\` for overlays or backgrounds. It will break out of the dashboard grid and ruin the entire page. Only use \`absolute\`, and ensure the parent has \`relative\`.

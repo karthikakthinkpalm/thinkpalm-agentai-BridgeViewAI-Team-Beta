@@ -1,6 +1,16 @@
 # BridgeView AI
 
-**Maritime UI Generator** — reads a product spec (PRD), proposes a widget hierarchy, shows a live dashboard preview driven by your input, and exports production-ready React components.
+## Problem Statement
+Building customized maritime operational dashboards traditionally takes weeks of engineering, requiring deep domain knowledge and specialized UI design. **BridgeView AI** solves this by acting as an autonomous Maritime UI Generator — it reads a product spec (PRD), proposes a widget hierarchy, shows a live dashboard preview driven by your input, and exports production-ready React components in seconds.
+
+## Team Members & Contributions
+* **[Member 1 Name]** — [Role / Contribution, e.g., Orchestrator & LLM Integration]
+* **[Member 2 Name]** — [Role / Contribution, e.g., UI/UX & Frontend Development]
+* **[Member 3 Name]** — [Role / Contribution, e.g., Agent Logic & Prompt Engineering]
+
+*(Please update the team members list above with actual names and contributions)*
+
+---
 
 Built with Next.js, Groq (Llama 3.x), an **adaptive agent orchestrator**, config-driven tools, prompt engineering, and session + IndexedDB memory.
 

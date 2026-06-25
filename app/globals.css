@@ -130,6 +130,7 @@
     filter: blur(85px);
     opacity: 0.55;
     animation: drift 14s ease-in-out infinite alternate;
+    pointer-events: none;
   }
 
   .animate-fade-in {
@@ -173,6 +174,15 @@
     border: 2px solid rgb(15 23 42 / 0.7);
     border-radius: 9999px;
     background: linear-gradient(rgb(var(--accent) / 0.5), rgb(var(--accent-2) / 0.35));
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

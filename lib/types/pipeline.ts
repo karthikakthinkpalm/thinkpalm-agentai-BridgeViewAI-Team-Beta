@@ -64,6 +64,8 @@ export interface WidgetDefinition {
   recommendations?: VisualizationRecommendation[];
   zone?: LayoutZone;
   layoutOrder?: number;
+  visualization?: string;
+  reason?: string;
 }
 
 export interface ParsedSchema {
