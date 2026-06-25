@@ -8,9 +8,9 @@ Building customized maritime operational dashboards traditionally takes weeks of
 [Watch the walkthrough on Loom](https://www.loom.com/share/0f2a684094b94ac294ac40d0cc76db47)
 
 ## Team Members & Contributions
-* **[Member 1 Name]** — [Role / Contribution, e.g., Orchestrator & LLM Integration]
-* **[Member 2 Name]** — [Role / Contribution, e.g., UI/UX & Frontend Development]
-* **[Member 3 Name]** — [Role / Contribution, e.g., Agent Logic & Prompt Engineering]
+* **Daisy Augustine** — Orchestrator & LLM Integration
+* **Karthika Krishnan** — UI/UX & Frontend Development
+* **Jenifer Deli** — Agent Logic & Prompt Engineering
 
 *(Please update the team members list above with actual names and contributions)*
 
