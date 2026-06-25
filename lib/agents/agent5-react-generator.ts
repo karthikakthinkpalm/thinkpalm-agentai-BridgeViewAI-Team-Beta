@@ -92,6 +92,7 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema, provider?: '
       const { response, model } = await createChatCompletion(
         {
           temperature: 0.7,
+          max_tokens: 8192,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
@@ -107,6 +108,14 @@ export async function runAgent5ReactGenerator(schema: ParsedSchema, provider?: '
       
       // Failsafe: Strip any imports that are NOT importing 'react' to prevent Vite/Babel sandbox crashes
       clean = clean.replace(/^import\s+.*?(?:from\s+)?['"](?!react(?:$|['"])).*?['"];?\s*$/gm, '');
+      
+      // Failsafe: Strip design system template interpolation patterns (e.g. ${"vesselMarker"} or ${'vesselMarker'}) that cause SyntaxErrors in JSX attributes
+      clean = clean.replace(/\$\{\s*['"][a-zA-Z0-9_-]+['"]\s*\}/g, '');
+      
+      // Failsafe: Strip variable references like ${designSystem.mapContainer}
+      clean = clean.replace(/\$\{\s*(?:designSystem|classes|styles|theme)\.[a-zA-Z0-9_-]+\s*\}/g, '');
+      // Failsafe: Strip pure variable bindings like className={designSystem.mapContainer} -> className=""
+      clean = clean.replace(/className=\{[^{}]*(?:designSystem|classes|styles|theme)\.[a-zA-Z0-9_-]+[^{}]*\}/g, 'className=""');
       
       if (!clean) throw new Error('Empty LLM response');
       registerComponent(widget.name, clean);

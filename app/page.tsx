@@ -31,7 +31,7 @@ type SchemaSummary = {
   widgets?: string[];
 };
 
-type CenterTab = 'memory' | 'prompts' | 'studio' | 'preview' | 'trace' | 'history';
+type CenterTab = 'memory' | 'prompts' | 'studio' | 'code' | 'trace' | 'history';
 type ThemeId = 'ocean' | 'harbor' | 'abyss';
 
 export default function Home() {
@@ -46,7 +46,7 @@ export default function Home() {
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedWidget, setSelectedWidget] = useState('');
-  const [centerTab, setCenterTab] = useState<CenterTab>('preview');
+  const [centerTab, setCenterTab] = useState<CenterTab>('code');
   const [theme, setTheme] = useState<ThemeId>('ocean');
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function Home() {
     }
     
     setStatus('running');
-    setCenterTab('preview');
+    setCenterTab('code');
 
     addLog('SYSTEM', '7-agent pipeline started');
     addLog('AGENT 1', 'Requirement Analyzer — extracting entities and metrics...');
@@ -170,7 +170,7 @@ export default function Home() {
 
       setStatus('done');
       addLog('SYSTEM', 'Pipeline complete — preview + code export available');
-      setCenterTab('preview');
+      setCenterTab('code');
 
       if (data.tree.length > 0) setSelectedWidget(data.tree[0]);
     } catch (err) {
@@ -198,7 +198,7 @@ export default function Home() {
     { id: 'memory', label: 'Memory' },
     { id: 'prompts', label: 'Prompts' },
     { id: 'studio', label: 'Studio' },
-    { id: 'preview', label: 'Live Preview' },
+    { id: 'code', label: 'Code' },
     { id: 'trace', label: 'Trace' },
     { id: 'history', label: 'History' },
   ];
@@ -218,9 +218,9 @@ export default function Home() {
       style={{ backgroundColor: 'rgb(var(--bg))' }}
     >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="glow-orb left-[-8rem] top-[-7rem] bg-[rgb(var(--accent)/0.22)]" />
-        <div className="glow-orb bottom-[-10rem] right-[-6rem] bg-[rgb(var(--accent-2)/0.16)] delay-700" />
-        <div className="glow-orb left-[45%] top-[18%] h-44 w-44 bg-[rgb(var(--border)/0.10)] delay-1000" />
+        <div className="glow-orb pointer-events-none left-[-8rem] top-[-7rem] bg-[rgb(var(--accent)/0.22)]" />
+        <div className="glow-orb pointer-events-none bottom-[-10rem] right-[-6rem] bg-[rgb(var(--accent-2)/0.16)] delay-700" />
+        <div className="glow-orb pointer-events-none left-[45%] top-[18%] h-44 w-44 bg-[rgb(var(--border)/0.10)] delay-1000" />
       </div>
 
       <div className="relative z-10 border-b border-white/10 bg-[rgb(var(--surface-2)/0.75)] px-6 py-4 shadow-2xl shadow-black/30 backdrop-blur-xl">
@@ -312,10 +312,10 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[3fr_5fr_2fr] xl:overflow-hidden">
+      <div className="relative z-10 grid h-[calc(100vh-97px)] grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[minmax(250px,2.5fr)_minmax(280px,3fr)_minmax(400px,4.5fr)] xl:overflow-hidden">
 
         {/* LEFT — Spec input */}
-        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden xl:min-h-0">
+        <section className="min-w-0 glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden xl:min-h-0">
           <div className="border-b border-white/10 p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Product Spec</p>
@@ -385,14 +385,14 @@ export default function Home() {
         </section>
 
         {/* CENTER — Memory / Prompts / Studio / Live Preview */}
-        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-150 xl:min-h-0">
-          <div className="flex border-b border-white/10">
+        <section className="min-w-0 glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-150 xl:min-h-0">
+          <div className="flex overflow-x-auto scrollbar-none border-b border-white/10">
             {centerTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setCenterTab(tab.id)}
-                className={`flex-1 px-2 py-3 font-mono text-[0.65rem] uppercase tracking-wider transition ${
+                className={`flex-1 min-w-[80px] shrink-0 px-2 py-3 font-mono text-[0.65rem] uppercase tracking-wider transition ${
                   centerTab === tab.id
                     ? 'border-b-2 border-teal-400 bg-teal-400/10 text-teal-200'
                     : 'text-slate-500 hover:bg-slate-900/50 hover:text-slate-300'
@@ -403,7 +403,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
+          <div className={`flex-1 min-h-0 ${centerTab === 'code' ? 'flex flex-col overflow-hidden' : 'custom-scrollbar overflow-y-auto p-4'}`}>
             {centerTab === 'memory' && (
               <>
                 <div className="mb-4 grid grid-cols-2 gap-2 text-xs font-mono">
@@ -428,7 +428,7 @@ export default function Home() {
                   selectedId={selectedWidget}
                   onSelect={(id) => {
                     setSelectedWidget(id);
-                    setCenterTab('preview');
+                    setCenterTab('code');
                   }}
                 />
                 <div className="mt-6 border-t border-white/10 pt-4">
@@ -465,26 +465,56 @@ export default function Home() {
                 onShowAll={() => setHiddenWidgets([])}
               />
             )}
-            {centerTab === 'preview' && (
-              status !== 'done' ? (
-                <div className="flex h-full flex-col items-center justify-center font-mono text-sm text-slate-500 p-8 text-center gap-2">
-                  <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/20 text-xl">
-                    ⚡
+            {centerTab === 'code' && (
+              tree.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center p-8 text-center">
+                  <div className="max-w-sm">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-teal-300/20 bg-teal-300/10 text-3xl">⌁</div>
+                    <h2 className="text-lg font-semibold text-slate-200">No exported code yet</h2>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Run the pipeline to generate production-ready React TSX components with copy and download export.
+                    </p>
                   </div>
-                  <p>Live preview will be available after UI generation.</p>
-                  <p className="text-xs text-slate-600">Click "Generate UI" to begin the pipeline.</p>
                 </div>
               ) : (
                 <>
-                  <p className="mb-3 text-xs text-slate-500">
-                    Curated maritime visuals · {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
-                  </p>
-                  <DashboardPreview
-                    widgets={visiblePreviewWidgets}
+                  <div className="border-b border-white/10 p-3 space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+                    {tree.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setSelectedWidget(name)}
+                        className={`w-full rounded-xl px-3 py-2 text-left text-xs font-mono flex items-center gap-2 transition ${
+                          selectedWidget === name
+                            ? 'border border-teal-400/60 bg-teal-400/15 text-teal-100'
+                            : 'border border-white/5 bg-slate-950/60 text-slate-300 hover:bg-slate-900/80'
+                        }`}
+                      >
+                        <span className="text-emerald-400">✓</span>
+                        {name}.tsx
+                      </button>
+                    ))}
+                  </div>
+
+                  <CodeExportBar
+                    selectedWidget={selectedWidget}
+                    code={components[selectedWidget] ?? ''}
+                    allComponents={components}
                     prd={prdText}
-                    schema={schemaObj}
-                    components={components}
                   />
+
+                  <div className="custom-scrollbar flex-1 overflow-auto p-4 min-w-0">
+                    {selectedWidget && (
+                      <div className="min-w-0 w-full">
+                        <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">
+                          {selectedWidget}.tsx
+                        </p>
+                        <pre className="rounded-2xl border border-slate-700/70 bg-slate-950/85 p-4 text-xs font-mono leading-relaxed text-yellow-200 whitespace-pre-wrap break-all overflow-x-auto max-w-full shadow-inner">
+                          {components[selectedWidget]}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
                 </>
               )
             )}
@@ -527,66 +557,42 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CODE + EXPORT */}
-        <section className="glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-300 xl:min-h-0">
+        {/* RIGHT — Live Preview */}
+        <section className="min-w-0 glass-panel animate-panel-rise flex min-h-[32rem] flex-col overflow-hidden delay-300 xl:min-h-0">
           <div className="border-b border-white/10 p-4">
             <div className="flex items-center justify-between">
-              <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Production Code</p>
-              <span className="rounded-full bg-teal-400/10 px-2.5 py-1 text-[0.65rem] font-mono text-teal-200">{tree.length} files</span>
+              <p className="font-mono text-xs uppercase tracking-[0.25em] text-slate-400">Live Preview</p>
+              {status === 'done' && (
+                <span className="rounded-full bg-teal-400/10 px-2.5 py-1 text-[0.65rem] font-mono text-teal-200">
+                  {visiblePreviewWidgets.length} widget{visiblePreviewWidgets.length === 1 ? '' : 's'}
+                </span>
+              )}
             </div>
           </div>
 
-          {tree.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center p-8 text-center">
-              <div className="max-w-sm">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl border border-teal-300/20 bg-teal-300/10 text-3xl">⌁</div>
-                <h2 className="text-lg font-semibold text-slate-200">No exported code yet</h2>
-                <p className="mt-2 text-sm text-slate-500">
-                  Run the pipeline to generate production-ready React TSX components with copy and download export.
+          <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
+            {status !== 'done' ? (
+              <div className="flex h-full flex-col items-center justify-center font-mono text-sm text-slate-500 p-8 text-center gap-2">
+                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-800/20 text-xl">
+                  ⚡
+                </div>
+                <p>Live preview will be available after UI generation.</p>
+                <p className="text-xs text-slate-600">Click "Generate UI" to begin the pipeline.</p>
+              </div>
+            ) : (
+              <>
+                <p className="mb-3 text-xs text-slate-500">
+                  Curated maritime visuals
                 </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="border-b border-white/10 p-3 space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
-                {tree.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setSelectedWidget(name)}
-                    className={`w-full rounded-xl px-3 py-2 text-left text-xs font-mono flex items-center gap-2 transition ${
-                      selectedWidget === name
-                        ? 'border border-teal-400/60 bg-teal-400/15 text-teal-100'
-                        : 'border border-white/5 bg-slate-950/60 text-slate-300 hover:bg-slate-900/80'
-                    }`}
-                  >
-                    <span className="text-emerald-400">✓</span>
-                    {name}.tsx
-                  </button>
-                ))}
-              </div>
-
-              <CodeExportBar
-                selectedWidget={selectedWidget}
-                code={components[selectedWidget] ?? ''}
-                allComponents={components}
-                prd={prdText}
-              />
-
-              <div className="custom-scrollbar flex-1 overflow-auto p-4">
-                {selectedWidget && (
-                  <>
-                    <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">
-                      {selectedWidget}.tsx
-                    </p>
-                    <pre className="rounded-2xl border border-slate-700/70 bg-slate-950/85 p-4 text-xs font-mono leading-relaxed text-yellow-200 whitespace-pre-wrap shadow-inner">
-                      {components[selectedWidget]}
-                    </pre>
-                  </>
-                )}
-              </div>
-            </>
-          )}
+                <DashboardPreview
+                  widgets={visiblePreviewWidgets}
+                  prd={prdText}
+                  schema={schemaObj}
+                  components={components}
+                />
+              </>
+            )}
+          </div>
         </section>
 
 

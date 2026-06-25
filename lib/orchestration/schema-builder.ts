@@ -27,6 +27,8 @@ export function buildSchema(
       recommendations: vizRecs.length > 0 ? vizRecs : undefined,
       zone: placement?.zone,
       layoutOrder: placement?.order,
+      visualization: sw.visualization,
+      reason: sw.reason,
     };
   });
 

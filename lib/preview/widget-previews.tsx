@@ -301,7 +301,7 @@ function DashboardPreviewInner({ widgets, components, prd }: { widgets: string[]
         </div>
 
       </div>
-      <div className="columns-1 2xl:columns-2 gap-6">
+      <div className="grid grid-cols-1 2xl:grid-cols-2 gap-6">
         {displayWidgets.map((w) => {
           let codeStr = components?.[w];
           if (!codeStr && components) {
@@ -319,7 +319,7 @@ function DashboardPreviewInner({ widgets, components, prd }: { widgets: string[]
           }
 
           return (
-            <div key={w} className="break-inside-avoid mb-6 flex flex-col overflow-hidden">
+            <div key={w} className="flex flex-col min-w-0 overflow-hidden">
               {codeStr ? (
                 <BabelWidgetPreview code={codeStr} widgetName={w} />
               ) : (
