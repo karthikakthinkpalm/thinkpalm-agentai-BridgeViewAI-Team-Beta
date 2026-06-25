@@ -3,6 +3,10 @@
 ## Problem Statement
 Building customized maritime operational dashboards traditionally takes weeks of engineering, requiring deep domain knowledge and specialized UI design. **BridgeView AI** solves this by acting as an autonomous Maritime UI Generator — it reads a product spec (PRD), proposes a widget hierarchy, shows a live dashboard preview driven by your input, and exports production-ready React components in seconds.
 
+## Demo video
+
+[Watch the walkthrough on Loom](https://www.loom.com/share/0f2a684094b94ac294ac40d0cc76db47)
+
 ## Team Members & Contributions
 * **[Member 1 Name]** — [Role / Contribution, e.g., Orchestrator & LLM Integration]
 * **[Member 2 Name]** — [Role / Contribution, e.g., UI/UX & Frontend Development]
